@@ -1,0 +1,24 @@
+const mongoose = require('mongoose');
+
+const ActivityLogSchema = new mongoose.Schema({
+  action: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  entityId: {
+    type: String,
+  },
+  entityName: {
+      type: String
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+module.exports = mongoose.model('ActivityLog', ActivityLogSchema);
