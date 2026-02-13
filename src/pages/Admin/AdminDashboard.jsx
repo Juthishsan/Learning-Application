@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import AdminSidebar from '../components/AdminSidebar';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { Users, BookOpen, Activity, TrendingUp, Calendar, ArrowUpRight, Shield } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 

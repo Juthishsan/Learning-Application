@@ -36,4 +36,15 @@ const courseStorage = new CloudinaryStorage({
 const upload = multer({ storage: storage });
 const courseUpload = multer({ storage: courseStorage });
 
-module.exports = { upload, courseUpload, cloudinary };
+const submissionStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'course_submissions',
+        resource_type: 'auto',
+        allowed_formats: ['pdf', 'doc', 'docx', 'zip', 'jpg', 'png'],
+        public_id: (req, file) => `submission_${req.params.userId}_${req.params.assignmentId}_${Date.now()}`
+    }
+});
+const submissionUpload = multer({ storage: submissionStorage });
+
+module.exports = { upload, courseUpload, submissionUpload, cloudinary };

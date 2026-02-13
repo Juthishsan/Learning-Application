@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Admin = require('../models/Admin');
+const Instructor = require('../models/Instructor');
 const ActivityLog = require('../models/ActivityLog');
 
 // Register User
@@ -73,6 +74,19 @@ router.post('/login', async (req, res) => {
         if (!isMatch) {
              return res.status(400).json({ msg: 'Invalid Credentials' });
         }
+        // Fetch additional details if instructor
+        let extraData = {};
+        if (user.role === 'instructor') {
+            const instructor = await Instructor.findOne({ email: user.email });
+            if (instructor) {
+                extraData = { 
+                    expertise: instructor.designation, // Map back designation to expertise for frontend
+                    designation: instructor.designation,
+                    instructorId: instructor._id
+                };
+            }
+        }
+
         return res.json({ 
             msg: 'Login successful', 
             user: { 
@@ -84,7 +98,8 @@ router.post('/login', async (req, res) => {
                 phone: user.phone,
                 location: user.location,
                 bio: user.bio,
-                socialLinks: user.socialLinks
+                socialLinks: user.socialLinks,
+                ...extraData
             } 
         });
     }

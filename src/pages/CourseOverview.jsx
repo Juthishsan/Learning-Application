@@ -63,7 +63,7 @@ const CourseOverview = () => {
             const res = await fetch('http://localhost:5000/api/users/enroll', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, courseId: id })
+                body: JSON.stringify({ userId: user.id || user._id, courseId: id })
             });
             const data = await res.json();
             

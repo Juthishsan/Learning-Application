@@ -3,93 +3,29 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PlayCircle, FileText, CheckCircle, ChevronLeft, Menu, Lock, Download, ChevronRight, Video, File, HelpCircle, Check, X as XIcon, RefreshCw, Trophy, ArrowRight, Clock, AlertCircle, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Mock Question Pool
-const QUESTION_POOL = [
-    {
-        id: 1,
-        question: "What does HTML stand for?",
-        options: ["Hyper Text Markup Language", "Home Tool Markup Language", "Hyperlinks and Text Markup Language", "Hyper Tech Markup Language"],
-        correct: "Hyper Text Markup Language",
-        topic: "html5"
-    },
-    {
-        id: 2,
-        question: "Which tag is used to define an internal style sheet?",
-        options: ["<css>", "<script>", "<style>", "<link>"],
-        correct: "<style>",
-        topic: "html5"
-    },
-    {
-        id: 3,
-        question: "Which property is used to change the background color?",
-        options: ["color", "bgcolor", "background-color", "bg-color"],
-        correct: "background-color",
-        topic: "css3"
-    },
-    {
-        id: 4,
-        question: "How do you declare a JavaScript variable?",
-        options: ["v carName;", "variable carName;", "var carName;", "val carName;"],
-        correct: "var carName;",
-        topic: "javascript"
-    },
-    {
-        id: 5,
-        question: "Which HTML5 element defines navigation links?",
-        options: ["<nav>", "<navigation>", "<navigate>", "<links>"],
-        correct: "<nav>",
-        topic: "html5"
-    },
-    {
-        id: 6,
-        question: "Which CSS property controls the text size?",
-        options: ["font-style", "text-size", "font-size", "text-style"],
-        correct: "font-size",
-        topic: "css3"
-    },
-    {
-        id: 7,
-        question: "What is the correct way to write a JavaScript array?",
-        options: ["var colors = 1 = (\"red\"), 2 = (\"green\")", "var colors = (1:\"red\", 2:\"green\")", "var colors = [\"red\", \"green\", \"blue\"]", "var colors = \"red\", \"green\", \"blue\""],
-        correct: "var colors = [\"red\", \"green\", \"blue\"]",
-        topic: "javascript"
-    },
-    {
-        id: 8,
-        question: "Inside which HTML element do we put the JavaScript?",
-        options: ["<js>", "<scripting>", "<script>", "<javascript>"],
-        correct: "<script>",
-        topic: "html5"
-    },
-    {
-        id: 9,
-        question: "How do you select an element with id 'demo' in CSS?",
-        options: [".demo", "#demo", "demo", "*demo"],
-        correct: "#demo",
-        topic: "css3"
-    },
-    {
-        id: 10,
-        question: "Which event occurs when the user clicks on an HTML element?",
-        options: ["onmouseover", "onchange", "onclick", "onmouseclick"],
-        correct: "onclick",
-        topic: "javascript"
-    },
-    {
-        id: 11,
-        question: "In CSS, how do you select all p elements inside a div element?",
-        options: ["div + p", "div p", "div.p", "div > p"],
-        correct: "div p",
-        topic: "css3"
-    },
-    {
-        id: 12,
-        question: "Which operator is used to assign a value to a variable?",
-        options: ["*", "-", "=", "x"],
-        correct: "=",
-        topic: "javascript"
+// Helper to mix content array with assignments and quizzes
+const mergeContent = (course) => {
+    let mixed = [];
+    if (course.content) mixed = [...course.content];
+    
+    // Add assignments
+    if (course.assignments) {
+        course.assignments.forEach(a => {
+            mixed.push({ ...a, type: 'assignment', isDatabase: true });
+        });
     }
-];
+
+    // Add quizzes
+    if (course.quizzes) {
+        course.quizzes.forEach(q => {
+            mixed.push({ ...q, type: 'quiz', isDatabase: true });
+        });
+    }
+    
+    // Optional: Sort by creation date if needed. For now, pushing them to end.
+    return mixed;
+};
+
 
 const CourseContent = () => {
     const { id } = useParams();
@@ -104,7 +40,8 @@ const CourseContent = () => {
     const [currentQuiz, setCurrentQuiz] = useState([]);
     const [userAnswers, setUserAnswers] = useState({});
     const [score, setScore] = useState(0);
-    const [savedAssignments, setSavedAssignments] = useState({}); // { 'assign_1': { score: 80, ... } }
+    const [savedAssignments, setSavedAssignments] = useState({});
+    const [savedQuizzes, setSavedQuizzes] = useState({}); // { 'quizId': { score: 80, ... } }
     const [submissionLoading, setSubmissionLoading] = useState(false);
     const [lastAttemptData, setLastAttemptData] = useState(null); 
     
@@ -112,6 +49,7 @@ const CourseContent = () => {
     const [completedContent, setCompletedContent] = useState([]); // Array of IDs
 
     const user = JSON.parse(localStorage.getItem('user'));
+    const [mixedContent, setMixedContent] = useState([]);
 
     useEffect(() => {
         const fetchCourseAndCheckEnrollment = async () => {
@@ -147,6 +85,14 @@ const CourseContent = () => {
                     setSavedAssignments(assignMap);
                 }
 
+                if (currentEnrollment.quizzes) {
+                    const quizMap = {};
+                    currentEnrollment.quizzes.forEach(q => {
+                        quizMap[q.quizId] = q;
+                    });
+                    setSavedQuizzes(quizMap);
+                }
+
                 // Load completed content
                 if (currentEnrollment.completedContent) {
                     setCompletedContent(currentEnrollment.completedContent);
@@ -157,9 +103,12 @@ const CourseContent = () => {
                 const courseData = await courseRes.json();
                 setCourse(courseData);
                 
+                const allContent = mergeContent(courseData);
+                setMixedContent(allContent);
+
                 // Set first content as active if available and not already set
-                if (!activeContent && courseData.content && courseData.content.length > 0) {
-                    setActiveContent(courseData.content[0]);
+                if (!activeContent && allContent.length > 0) {
+                    setActiveContent(allContent[0]);
                 }
                 
                 setLoading(false);
@@ -174,7 +123,7 @@ const CourseContent = () => {
 
     // Check for saved state when key changes
     useEffect(() => {
-        if (activeContent?.type === 'assignment') {
+        if (activeContent?.type === 'assignment' || activeContent?.type === 'quiz') {
             setAssignmentStatus('overview'); // Always land on the dashboard view
             setLastAttemptData(null); // Reset immediate attempt data
             setUserAnswers({});
@@ -182,11 +131,23 @@ const CourseContent = () => {
     }, [activeContent]);
 
 
-    // Assignment Logic
-    const startAssignment = () => {
-        // Shuffle and pick 5
-        const shuffled = [...QUESTION_POOL].sort(() => 0.5 - Math.random());
-        setCurrentQuiz(shuffled.slice(0, 5));
+    // Assignment/Quiz Logic
+    const startAssessment = () => {
+        if (activeContent.type === 'quiz' && activeContent.questions) {
+             setCurrentQuiz(activeContent.questions);
+        } else {
+             // Fallback for old hardcoded assignments or empty ones
+             // For "assignments" that are just text submissions in real life, we might treat differently
+             // But based on request, assignments have questions too? 
+             // The schema for Assignment didn't have questions, only Quizzes had questions.
+             // If Assignment is just a "Task", we might just show the description.
+             // BUT, if the user wants "Assignments related questions" similar to quizzes...
+             // Let's assume for now Quizzes are the interactive ones.
+             // If activeContent is Assignment (Task), we might just mark as complete.
+             
+             // However, for consistency with previous code, let's treat Quizzes as the interactive Q&A.
+             setCurrentQuiz([]);
+        }
         setUserAnswers({});
         setAssignmentStatus('in-progress');
         window.scrollTo(0, 0);
@@ -199,10 +160,16 @@ const CourseContent = () => {
         }));
     };
 
-    const submitAssignment = async () => {
+    const submitAssessment = async () => {
         let correctCount = 0;
-        currentQuiz.forEach(q => {
-            if (userAnswers[q.id] === q.correct) {
+        // For Quizzes
+        currentQuiz.forEach((q, idx) => {
+            // Need to handle if correct answer is index or string. Schema said Number (index)
+            // But previous hardcoded was string.
+            // Let's adapt. The schema created in previous turn uses `correctAnswer: Number`.
+            const correctOptIndex = q.correctAnswer; 
+            // userAnswers values ? If we store the option STRING, we need to compare with q.options[correctOptIndex]
+            if (userAnswers[idx] === q.options[correctOptIndex]) {
                 correctCount++;
             }
         });
@@ -212,20 +179,29 @@ const CourseContent = () => {
         // Save to backend
         setSubmissionLoading(true);
         try {
-            await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses/${id}/assignment`, {
+            const endpoint = activeContent.type === 'quiz' ? 'quiz' : 'assignment';
+            const body = activeContent.type === 'quiz' 
+                ? { quizId: activeContent._id || activeContent.quizId, score: finalScore }
+                : { assignmentId: activeContent._id || activeContent.assignmentId, score: finalScore }; // Assignments might not be graded automatically if they are just tasks, but reusing logic.
+
+            await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses/${id}/${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    assignmentId: activeContent._id,
-                    score: finalScore
-                })
+                body: JSON.stringify(body)
             });
             
             // Update local saved state
-            setSavedAssignments(prev => ({
-                ...prev,
-                [activeContent._id]: { score: finalScore, completedAt: new Date().toISOString() }
-            }));
+            if (activeContent.type === 'quiz') {
+                 setSavedQuizzes(prev => ({
+                    ...prev,
+                    [activeContent._id]: { score: finalScore, completedAt: new Date().toISOString() }
+                }));
+            } else {
+                setSavedAssignments(prev => ({
+                    ...prev,
+                    [activeContent._id]: { score: finalScore, completedAt: new Date().toISOString() }
+                }));
+            }
 
             // Store attempt data for the "Result" capability (immediate feedback)
             setLastAttemptData({
@@ -250,7 +226,7 @@ const CourseContent = () => {
 
 
     const toggleCompletion = async () => {
-        if (!activeContent || activeContent.type === 'assignment') return;
+        if (!activeContent || activeContent.type === 'assignment' || activeContent.type === 'quiz') return;
 
         const contentId = activeContent._id;
         try {
@@ -272,6 +248,49 @@ const CourseContent = () => {
         }
     };
 
+    const handleFileUpload = async (e) => {
+        e.preventDefault();
+        const fileInput = e.target.elements.assignmentFile;
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            toast.error("Please select a file");
+            return;
+        }
+
+        setSubmissionLoading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const assignId = activeContent.assignmentId || activeContent._id;
+
+        try {
+            const res = await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses/${id}/assignments/${assignId}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                 const data = await res.json();
+                 // Update savedAssignments
+                 const updatedAssignment = data.assignments.find(a => a.assignmentId === assignId);
+                 setSavedAssignments(prev => ({
+                     ...prev,
+                     [assignId]: updatedAssignment
+                 }));
+                 toast.success("Assignment submitted successfully!");
+                 fileInput.value = ''; // Reset input
+            } else {
+                toast.error("Upload failed");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Error uploading file");
+        } finally {
+            setSubmissionLoading(false);
+        }
+    };
+
 
     if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#334155' }}>Loading Class...</div>;
     if (!course) return <div style={{ padding: '4rem', textAlign: 'center' }}>Course not found</div>;
@@ -279,22 +298,19 @@ const CourseContent = () => {
     const isPdf = activeContent?.type === 'pdf' || (activeContent?.url && activeContent.url.endsWith('.pdf'));
 
     // Filter contents
-    const videoContents = course.content ? course.content.filter(c => c.type === 'video') : [];
-    const studyMaterials = course.content ? course.content.filter(c => c.type !== 'video') : [];
+    const videoContents = mixedContent.filter(c => c.type === 'video');
+    const studyMaterials = mixedContent.filter(c => c.type === 'pdf' || c.type === 'image');
+    const assignmentsList = mixedContent.filter(c => c.type === 'assignment');
+    const quizzesList = mixedContent.filter(c => c.type === 'quiz');
+
     
-    // Assignment sidebar Item
-    const assignmentItem = {
-        _id: 'assign_1',
-        title: 'Assignment 1: Frontend Basics',
-        type: 'assignment'
-    };
-
-    const isAssignmentActive = activeContent?._id === 'assign_1';
-
-    const isScrollablePage = activeContent?.type === 'assignment' || (!isPdf && activeContent?.type !== 'video');
+    const isScrollablePage = activeContent?.type === 'assignment' || activeContent?.type === 'quiz' || (!isPdf && activeContent?.type !== 'video');
     
     // --- Assignment Dashboard Logic ---
-    const savedData = savedAssignments[activeContent?._id];
+    let savedData = null;
+    if (activeContent?.type === 'assignment') savedData = savedAssignments[activeContent._id];
+    if (activeContent?.type === 'quiz') savedData = savedQuizzes[activeContent._id];
+
     const hasPassed = savedData && savedData.score >= 80;
 
     const isCurrentContextCompleted = completedContent.includes(activeContent?._id);
@@ -320,7 +336,7 @@ const CourseContent = () => {
                 <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
                     <h3 style={{ color: '#1e293b', fontWeight: 700, margin: 0, fontSize: '1rem' }}>Course Content</h3>
                     <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-                        {completedContent.length} / {course.content.length} Completed
+                        {completedContent.length} / {mixedContent.length} Completed
                     </div>
                 </div>
 
@@ -407,35 +423,86 @@ const CourseContent = () => {
                     )}
                     
                     {/* Assignments Section */}
-                    <div style={{ borderTop: '1px solid #e2e8f0' }}>
-                         <div style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                             Assignments
-                         </div>
-                         <div 
-                             onClick={() => setActiveContent(assignmentItem)}
-                             style={{ 
-                                 padding: '1rem 1.5rem', 
-                                 borderBottom: '1px solid #f8fafc', 
-                                 cursor: 'pointer',
-                                 background: isAssignmentActive ? '#eff6ff' : 'white',
-                                 borderLeft: isAssignmentActive ? '4px solid #0ea5e9' : '4px solid transparent',
-                                 transition: 'all 0.2s'
-                             }}
-                             className="hover:bg-slate-50"
-                         >
-                             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                                 <div style={{ marginTop: '2px', color: isAssignmentActive ? '#0ea5e9' : (savedAssignments['assign_1']?.score >= 80 ? '#22c55e' : '#94a3b8') }}>
-                                      {savedAssignments['assign_1']?.score >= 80 ? <CheckCircle size={16} /> : <HelpCircle size={16} />}
-                                 </div>
-                                 <div>
-                                     <p style={{ margin: 0, fontSize: '0.9rem', color: isAssignmentActive ? '#0f172a' : '#334155', fontWeight: isAssignmentActive ? 600 : 400, lineHeight: 1.4 }}>
-                                         Assignment 1: Frontend Basics
-                                     </p>
-                                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Quiz • 5 Questions</span>
-                                 </div>
+                    {assignmentsList.length > 0 && (
+                        <div style={{ borderTop: studyMaterials.length > 0 ? '1px solid #e2e8f0' : 'none' }}>
+                             <div style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                 Assignments
                              </div>
-                         </div>
-                    </div>
+                             {assignmentsList.map((item, idx) => {
+                                 const isActive = activeContent?._id === item._id;
+                                 const itemSaved = savedAssignments[item._id];
+                                 const isPassed = itemSaved?.score >= 80;
+                                 return (
+                                     <div 
+                                         key={item._id} 
+                                         onClick={() => setActiveContent(item)}
+                                         style={{ 
+                                             padding: '1rem 1.5rem', 
+                                             borderBottom: '1px solid #f8fafc', 
+                                             cursor: 'pointer',
+                                             background: isActive ? '#eff6ff' : 'white',
+                                             borderLeft: isActive ? '4px solid #0ea5e9' : '4px solid transparent',
+                                             transition: 'all 0.2s'
+                                         }}
+                                         className="hover:bg-slate-50"
+                                     >
+                                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                             <div style={{ marginTop: '2px', color: isActive ? '#0ea5e9' : (isPassed ? '#22c55e' : '#94a3b8') }}>
+                                                  {isPassed ? <CheckCircle size={16} /> : <HelpCircle size={16} />}
+                                             </div>
+                                             <div>
+                                                 <p style={{ margin: 0, fontSize: '0.9rem', color: isActive ? '#0f172a' : '#334155', fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
+                                                     {item.title}
+                                                 </p>
+                                                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Assignment • Task</span>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 );
+                             })}
+                        </div>
+                    )}
+
+                    {/* Quizzes Section */}
+                    {quizzesList.length > 0 && (
+                        <div style={{ borderTop: '1px solid #e2e8f0' }}>
+                             <div style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                 Quizzes
+                             </div>
+                             {quizzesList.map((item, idx) => {
+                                 const isActive = activeContent?._id === item._id;
+                                 const itemSaved = savedQuizzes[item._id];
+                                 const isPassed = itemSaved?.score >= 80;
+                                 return (
+                                     <div 
+                                         key={item._id} 
+                                         onClick={() => setActiveContent(item)}
+                                         style={{ 
+                                             padding: '1rem 1.5rem', 
+                                             borderBottom: '1px solid #f8fafc', 
+                                             cursor: 'pointer',
+                                             background: isActive ? '#eff6ff' : 'white',
+                                             borderLeft: isActive ? '4px solid #0ea5e9' : '4px solid transparent',
+                                             transition: 'all 0.2s'
+                                         }}
+                                         className="hover:bg-slate-50"
+                                     >
+                                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                             <div style={{ marginTop: '2px', color: isActive ? '#0ea5e9' : (isPassed ? '#22c55e' : '#94a3b8') }}>
+                                                  {isPassed ? <CheckCircle size={16} /> : <HelpCircle size={16} />}
+                                             </div>
+                                             <div>
+                                                 <p style={{ margin: 0, fontSize: '0.9rem', color: isActive ? '#0f172a' : '#334155', fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
+                                                     {item.title}
+                                                 </p>
+                                                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Quiz • {item.questions?.length} Questions</span>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 );
+                             })}
+                        </div>
+                    )}
 
                     {(!course.content || course.content.length === 0) && (
                         <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
@@ -459,14 +526,14 @@ const CourseContent = () => {
                         </button>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                              <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                 {activeContent?.type === 'assignment' ? 'Graded Assignment' : 'Current Lesson'}
+                                 {activeContent?.type === 'quiz' ? 'Quiz Assessment' : activeContent?.type === 'assignment' ? 'Graded Assignment' : 'Current Lesson'}
                              </span>
                              <h1 style={{ fontSize: '1rem', color: '#1e293b', margin: 0, fontWeight: 700 }}>{activeContent?.title || course.title}</h1>
                         </div>
                     </div>
                     
                     {/* Completion Button */}
-                    {activeContent?.type !== 'assignment' && (
+                    {activeContent?.type !== 'assignment' && activeContent?.type !== 'quiz' && (
                         <button 
                             onClick={toggleCompletion}
                             style={{
@@ -492,11 +559,11 @@ const CourseContent = () => {
                 </div>
 
                 {/* Viewer */}
-                <div style={{ flex: 1, overflowY: isScrollablePage ? 'auto' : 'hidden', background: activeContent?.type === 'assignment' ? '#f8fafc' : '#2d2f31' }}> 
+                <div style={{ flex: 1, overflowY: isScrollablePage ? 'auto' : 'hidden', background: activeContent?.type === 'assignment' || activeContent?.type === 'quiz' ? '#f8fafc' : '#2d2f31' }}> 
                     
                     <div style={{ maxWidth: '100%', minHeight: isScrollablePage ? '100%' : 'auto', height: isScrollablePage ? 'auto' : '100%', display: 'flex', flexDirection: 'column' }}>
                         
-                        {activeContent?.type === 'assignment' ? (
+                        {activeContent?.type === 'assignment' || activeContent?.type === 'quiz' ? (
                             // --- ASSIGNMENT INTERFACE ---
                             <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', padding: '2rem 1.5rem 5rem' }}>
                                 
@@ -505,118 +572,222 @@ const CourseContent = () => {
                                         
                                         {/* Header Title Section */}
                                         <div>
-                                            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>Assignment 1: Frontend Basics</h1>
-                                            <div style={{ display: 'flex', gap: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={16} /> 10 min</span>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Calendar size={16} /> Due Jan 30, 2026</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Main Dashboard Card */}
-                                        <div className="card" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                                            
-                                            {/* Status Header */}
-                                            <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: savedData ? (hasPassed ? '#f0fdf4' : '#fef2f2') : '#f8fafc' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                    {savedData ? (
-                                                        hasPassed ? (
-                                                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                                                                <Check size={28} />
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                                                                <XIcon size={28} />
-                                                            </div>
-                                                        )
-                                                    ) : (
-                                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                                                            <HelpCircle size={28} />
-                                                        </div>
-                                                    )}
-                                                    
-                                                    <div>
-                                                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', margin: 0 }}>
-                                                            {savedData ? (hasPassed ? 'Passed' : 'Try Again') : 'Receive grade'}
-                                                        </h2>
-                                                        <p style={{ margin: '0.25rem 0 0', color: '#64748b', fontSize: '0.9rem' }}>
-                                                            {savedData 
-                                                                ? `You scored ${savedData.score}%` 
-                                                                : 'To pass, you must score at least 80%'}
-                                                        </p>
-                                                    </div>
-
-                                                    <div style={{ marginLeft: 'auto' }}>
-                                                        {savedData ? (
-                                                            <button 
-                                                                onClick={startAssignment}
-                                                                className="btn"
-                                                                style={{ 
-                                                                    background: '#fff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, padding: '0.75rem 1.5rem', borderRadius: '6px',
-                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '0.5rem' 
-                                                                }}
-                                                            >
-                                                                <RefreshCw size={18} /> Retake Assessment
-                                                            </button>
-                                                        ) : (
-                                                            <button 
-                                                                onClick={startAssignment}
-                                                                className="btn btn-primary"
-                                                                style={{ padding: '0.75rem 2rem', fontWeight: 600 }}
-                                                            >
-                                                                Start Assessment
-                                                            </button>
-                                                        )}
+                                            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>
+                                                {activeContent.title}
+                                            </h1>
+                                            {activeContent.type === 'quiz' && (
+                                                <div style={{ display: 'flex', gap: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Clock size={16} /> 10 min</span>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Calendar size={16} /> Due {new Date().toLocaleDateString()}</span>
+                                                </div>
+                                            )}
+                                            {activeContent.type === 'assignment' && (
+                                                <div style={{ marginTop: '1rem', color: '#475569', lineHeight: 1.6 }}>
+                                                    <p style={{ fontWeight: 600, color: '#334155', marginBottom: '0.5rem' }}>Instructions:</p>
+                                                    {activeContent.description}
+                                                    <div style={{ marginTop: '1rem', color: '#64748b', fontSize: '0.9rem' }}>
+                                                        Due: {activeContent.dueDate ? new Date(activeContent.dueDate).toLocaleDateString() : 'Flexible'}
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            {/* Details Table */}
-                                            <div style={{ padding: '1.5rem' }}>
-                                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                     <thead>
-                                                         <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                             <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Grade Item</th>
-                                                             <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Weight</th>
-                                                             <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Your Grade</th>
-                                                             <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
-                                                         </tr>
-                                                     </thead>
-                                                     <tbody>
-                                                         <tr>
-                                                             <td style={{ padding: '1rem 0.75rem', fontWeight: 600, color: '#334155' }}>Frontend Basics Quiz</td>
-                                                             <td style={{ padding: '1rem 0.75rem', color: '#64748b' }}>100%</td>
-                                                             <td style={{ padding: '1rem 0.75rem', fontWeight: 700, color: '#0f172a' }}>
-                                                                 {savedData ? `${savedData.score}%` : '--'}
-                                                             </td>
-                                                             <td style={{ padding: '1rem 0.75rem' }}>
-                                                                 {savedData ? (
-                                                                     hasPassed ? <span style={{ color: '#166534', background: '#dcfce7', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Passed</span> 
-                                                                     : <span style={{ color: '#b91c1c', background: '#fee2e2', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Failed</span>
-                                                                 ) : (
-                                                                     <span style={{ color: '#64748b' }}>--</span>
-                                                                 )}
-                                                             </td>
-                                                         </tr>
-                                                     </tbody>
-                                                 </table>
-                                            </div>
+                                            )}
                                         </div>
+                                        
+                                        {activeContent.type === 'quiz' ? (
+                                            <>
+                                                {/* Main Dashboard Card */}
+                                                <div className="card" style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                                                    
+                                                    {/* Status Header */}
+                                                    <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: savedData ? (hasPassed ? '#f0fdf4' : '#fef2f2') : '#f8fafc' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                            {savedData ? (
+                                                                hasPassed ? (
+                                                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                                                        <Check size={28} />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                                                        <XIcon size={28} />
+                                                                    </div>
+                                                                )
+                                                            ) : (
+                                                                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                                                                    <HelpCircle size={28} />
+                                                                </div>
+                                                            )}
+                                                            
+                                                            <div>
+                                                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', margin: 0 }}>
+                                                                    {savedData ? (hasPassed ? 'Passed' : 'Try Again') : 'Receive grade'}
+                                                                </h2>
+                                                                <p style={{ margin: '0.25rem 0 0', color: '#64748b', fontSize: '0.9rem' }}>
+                                                                    {savedData 
+                                                                        ? `You scored ${savedData.score}%` 
+                                                                        : 'To pass, you must score at least 80%'}
+                                                                </p>
+                                                            </div>
 
-                                        {/* Instructions */}
-                                        <div className="card" style={{ background: 'white', padding: '2rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '1rem' }}>Instructions</h3>
-                                            <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '1rem' }}>
-                                                Check your knowledge of the fundamental concepts covering HTML, CSS, and Javascript. 
-                                                You need to answer at least 4 out of 5 questions correctly to pass.
-                                            </p>
-                                            <ul style={{ paddingLeft: '1.5rem', color: '#475569', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <li>This quiz covers topics from Modules 1-3.</li>
-                                                <li>You have 10 minutes to complete the quiz.</li>
-                                                <li>You can retake the quiz as many times as you like.</li>
-                                                <li>Your highest score will be kept.</li>
-                                            </ul>
-                                        </div>
+                                                            <div style={{ marginLeft: 'auto' }}>
+                                                                {savedData ? (
+                                                                    <button 
+                                                                        onClick={startAssessment}
+                                                                        className="btn"
+                                                                        style={{ 
+                                                                            background: '#fff', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600, padding: '0.75rem 1.5rem', borderRadius: '6px',
+                                                                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '0.5rem' 
+                                                                        }}
+                                                                    >
+                                                                        <RefreshCw size={18} /> Retake Assessment
+                                                                    </button>
+                                                                ) : (
+                                                                    <button 
+                                                                        onClick={startAssessment}
+                                                                        className="btn btn-primary"
+                                                                        style={{ padding: '0.75rem 2rem', fontWeight: 600 }}
+                                                                    >
+                                                                        Start Assessment
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
+                                                    {/* Details Table */}
+                                                    <div style={{ padding: '1.5rem' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                            <thead>
+                                                                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Grade Item</th>
+                                                                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Weight</th>
+                                                                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Your Grade</th>
+                                                                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td style={{ padding: '1rem 0.75rem', fontWeight: 600, color: '#334155' }}>
+                                                                        {activeContent.title}
+                                                                    </td>
+                                                                    <td style={{ padding: '1rem 0.75rem', color: '#64748b' }}>100%</td>
+                                                                    <td style={{ padding: '1rem 0.75rem', fontWeight: 700, color: '#0f172a' }}>
+                                                                        {savedData ? `${savedData.score}%` : '--'}
+                                                                    </td>
+                                                                    <td style={{ padding: '1rem 0.75rem' }}>
+                                                                        {savedData ? (
+                                                                            hasPassed ? <span style={{ color: '#166534', background: '#dcfce7', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Passed</span> 
+                                                                            : <span style={{ color: '#b91c1c', background: '#fee2e2', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Failed</span>
+                                                                        ) : (
+                                                                            <span style={{ color: '#64748b' }}>--</span>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="card" style={{ background: 'white', padding: '2rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '2rem' }}>
+                                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '1rem' }}>Instructions</h3>
+                                                    <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '1rem' }}>
+                                                        Check your knowledge. You need to answer at least 80% correctly to pass.
+                                                    </p>
+                                                    <ul style={{ paddingLeft: '1.5rem', color: '#475569', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                        <li>This quiz has {activeContent.questions?.length} questions.</li>
+                                                        <li>You can retake the quiz as many times as you like.</li>
+                                                        <li>Your highest score will be kept.</li>
+                                                    </ul>
+                                                </div>
+
+                                            </>
+                                        ) : (
+                                                /* Assignment View with File Upload */
+                                            <div className="card" style={{ background: '#fff', padding: '2rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                                     <div style={{ marginBottom: '1rem', color: savedData?.submissionUrl ? '#22c55e' : '#6366f1', display: 'flex', justifyContent: 'center' }}>
+                                                         {savedData?.submissionUrl ? <CheckCircle size={56} /> : <FileText size={56} />}
+                                                     </div>
+                                                     <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
+                                                         {savedData?.submissionUrl ? 'Assignment Submitted' : 'Submit Assignment'}
+                                                     </h2>
+                                                     <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+                                                         {activeContent.description || "Upload your work for this assignment. Acceptable formats: PDF, DOCX, ZIP, JPG, PNG."}
+                                                     </p>
+                                                     {activeContent.dueDate && (
+                                                         <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#ef4444', fontWeight: 500 }}>
+                                                             Due: {new Date(activeContent.dueDate).toLocaleDateString()}
+                                                         </div>
+                                                     )}
+                                                 </div>
+
+                                                 {savedData?.submissionUrl ? (
+                                                     <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '1.5rem', maxWidth: '500px', margin: '0 auto' }}>
+                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                                                             <div style={{ background: '#dcfce7', padding: '0.75rem', borderRadius: '50%', color: '#16a34a' }}>
+                                                                 <Check size={24} />
+                                                             </div>
+                                                             <div>
+                                                                 <h4 style={{ margin: 0, color: '#166534', fontSize: '1rem' }}>Submission Received</h4>
+                                                                 <p style={{ margin: '0.25rem 0 0', color: '#15803d', fontSize: '0.85rem' }}>
+                                                                     Submitted on {new Date(savedData.completedAt).toLocaleString()}
+                                                                 </p>
+                                                             </div>
+                                                         </div>
+                                                         <div style={{ paddingLeft: '3.5rem' }}>
+                                                             <a 
+                                                                 href={savedData.submissionUrl} 
+                                                                 target="_blank" 
+                                                                 rel="noopener noreferrer"
+                                                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#16a34a', textDecoration: 'none', fontWeight: 600 }}
+                                                             >
+                                                                 <Download size={16} /> View {savedData.fileName || 'Submission'}
+                                                             </a>
+                                                             <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #bbf7d0' }}>
+                                                                 <p style={{ fontSize: '0.85rem', color: '#15803d' }}>
+                                                                     <strong>Grade: </strong> 
+                                                                     {savedData.score !== undefined ? <span style={{ background: 'white', padding: '0.1rem 0.5rem', borderRadius: '4px', border: '1px solid #86efac' }}>{savedData.score}%</span> : 'Pending Review'}
+                                                                 </p>
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                 ) : (
+                                                     <form onSubmit={handleFileUpload} style={{ maxWidth: '500px', margin: '0 auto' }}>
+                                                         <div style={{ marginBottom: '1.5rem', border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '2rem', textAlign: 'center', background: '#f8fafc', transition: 'border-color 0.2s', cursor: 'pointer' }}
+                                                            onDragOver={e => e.currentTarget.style.borderColor = '#6366f1'}
+                                                            onDragLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                                                         >
+                                                             <input 
+                                                                 type="file" 
+                                                                 name="assignmentFile"
+                                                                 id="assignment-file"
+                                                                 style={{ display: 'none' }} 
+                                                                 onChange={(e) => {
+                                                                     // Optional: Show selected filename
+                                                                     const label = document.getElementById('file-label');
+                                                                     if(label && e.target.files[0]) label.innerText = e.target.files[0].name;
+                                                                 }}
+                                                             />
+                                                             <label htmlFor="assignment-file" style={{ cursor: 'pointer', display: 'block' }}>
+                                                                 <div style={{ marginBottom: '1rem', color: '#64748b' }}>
+                                                                     <div style={{ background: '#e2e8f0', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', color: '#475569' }}>
+                                                                         <Download size={32} style={{ transform: 'rotate(180deg)' }} /> {/* Upload icon workaround */}
+                                                                     </div>
+                                                                     <span id="file-label" style={{ fontWeight: 600, color: '#475569', display: 'block', marginBottom: '0.5rem' }}>Click to Browse or Drag File</span>
+                                                                     <span style={{ fontSize: '0.85rem' }}>PDF, DOCX, ZIP up to 10MB</span>
+                                                                 </div>
+                                                             </label>
+                                                         </div>
+                                                         <button 
+                                                             type="submit" 
+                                                             disabled={submissionLoading}
+                                                             className="btn btn-primary"
+                                                             style={{ width: '100%', padding: '1rem', fontWeight: 600, fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+                                                         >
+                                                             {submissionLoading ? 'Uploading...' : <><Check size={20} /> Submit Assignment</>}
+                                                         </button>
+                                                     </form>
+                                                 )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -656,13 +827,13 @@ const CourseContent = () => {
                                             {lastAttemptData.quiz.map((q, idx) => (
                                                 <div key={idx} style={{ padding: '1.25rem', borderRadius: '0.75rem', background: 'white', border: '1px solid #e2e8f0' }}>
                                                     <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                                                        {lastAttemptData.answers[q.id] === q.correct ? <CheckCircle color="#22c55e" size={20} /> : <XIcon color="#ef4444" size={20} />}
+                                                        {lastAttemptData.answers[idx] === q.options[q.correctAnswer] ? <CheckCircle color="#22c55e" size={20} /> : <XIcon color="#ef4444" size={20} />}
                                                         <span style={{ fontWeight: 600, color: '#334155' }}>{q.question}</span>
                                                     </div>
                                                     <div style={{ paddingLeft: '2rem', fontSize: '0.9rem' }}>
-                                                        <p style={{ margin: '0 0 0.25rem', color: '#64748b' }}>Your answer: <span style={{ fontWeight: 500, color: lastAttemptData.answers[q.id] === q.correct ? '#166534' : '#b91c1c' }}>{lastAttemptData.answers[q.id]}</span></p>
-                                                        {lastAttemptData.answers[q.id] !== q.correct && (
-                                                            <p style={{ margin: 0, color: '#15803d' }}>Correct answer: <strong>{q.correct}</strong></p>
+                                                        <p style={{ margin: '0 0 0.25rem', color: '#64748b' }}>Your answer: <span style={{ fontWeight: 500, color: lastAttemptData.answers[idx] === q.options[q.correctAnswer] ? '#166534' : '#b91c1c' }}>{lastAttemptData.answers[idx]}</span></p>
+                                                        {lastAttemptData.answers[idx] !== q.options[q.correctAnswer] && (
+                                                            <p style={{ margin: 0, color: '#15803d' }}>Correct answer: <strong>{q.options[q.correctAnswer]}</strong></p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -686,13 +857,13 @@ const CourseContent = () => {
                                 {assignmentStatus === 'in-progress' && (
                                     <div style={{ marginTop: '1rem' }}>
                                         <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', margin: 0 }}>Question {Object.keys(userAnswers).length} / 5</h3>
+                                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', margin: 0 }}>Question {Object.keys(userAnswers).length} / {currentQuiz.length}</h3>
                                             <span style={{ padding: '0.25rem 0.75rem', background: '#e0f2fe', color: '#0369a1', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>In Progress</span>
                                         </div>
                                         
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                             {currentQuiz.map((q, idx) => (
-                                                <div key={q.id} className="card" style={{ background: 'white', padding: '2rem', borderRadius: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                                <div key={q.id || idx} className="card" style={{ background: 'white', padding: '2rem', borderRadius: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                                                     <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1.5rem', lineHeight: 1.5 }}>
                                                         {idx + 1}. {q.question}
                                                     </h4>
@@ -705,18 +876,18 @@ const CourseContent = () => {
                                                                     alignItems: 'center', 
                                                                     padding: '1rem', 
                                                                     borderRadius: '0.75rem', 
-                                                                    border: userAnswers[q.id] === opt ? '2px solid #0ea5e9' : '1px solid #e2e8f0',
-                                                                    background: userAnswers[q.id] === opt ? '#f0f9ff' : 'white',
+                                                                    border: userAnswers[idx] === opt ? '2px solid #0ea5e9' : '1px solid #e2e8f0',
+                                                                    background: userAnswers[idx] === opt ? '#f0f9ff' : 'white',
                                                                     cursor: 'pointer',
                                                                     transition: 'all 0.2s'
                                                                 }}
                                                             >
                                                                 <input 
                                                                     type="radio" 
-                                                                    name={`q-${q.id}`} 
+                                                                    name={`q-${idx}`} // Use index as key for quiz from DB since q._id might not be unique if ad-hoc, but better use index for mapped content
                                                                     value={opt}
-                                                                    checked={userAnswers[q.id] === opt}
-                                                                    onChange={() => handleOptionSelect(q.id, opt)}
+                                                                    checked={userAnswers[idx] === opt}
+                                                                    onChange={() => handleOptionSelect(idx, opt)}
                                                                     style={{ marginRight: '1rem', transform: 'scale(1.2)' }}
                                                                 />
                                                                 <span style={{ color: '#334155' }}>{opt}</span>
@@ -729,12 +900,12 @@ const CourseContent = () => {
 
                                         <div style={{ marginTop: '2rem', textAlign: 'right' }}>
                                             <button 
-                                                onClick={submitAssignment}
-                                                disabled={Object.keys(userAnswers).length < 5 || submissionLoading}
+                                                onClick={submitAssessment}
+                                                disabled={Object.keys(userAnswers).length < currentQuiz.length || submissionLoading}
                                                 className="btn btn-primary"
-                                                style={{ padding: '1rem 2rem', opacity: Object.keys(userAnswers).length < 5 || submissionLoading ? 0.5 : 1 }}
+                                                style={{ padding: '1rem 2rem', opacity: Object.keys(userAnswers).length < currentQuiz.length || submissionLoading ? 0.5 : 1 }}
                                             >
-                                                {submissionLoading ? 'Submitting...' : 'Submit Assignment'}
+                                                {submissionLoading ? 'Submitting...' : 'Submit Assessment'}
                                             </button>
                                         </div>
                                     </div>

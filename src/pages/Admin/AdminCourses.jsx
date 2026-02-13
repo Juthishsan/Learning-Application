@@ -1,10 +1,10 @@
 
 import { useEffect, useState } from 'react';
-import AdminSidebar from '../components/AdminSidebar';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { Plus, Trash2, Edit, Search, X as XIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const AdminCourses = () => {
     const COURSE_CATEGORIES = [

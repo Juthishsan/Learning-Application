@@ -85,11 +85,12 @@ const Navbar = () => {
            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
             <Link to="/" style={{ fontWeight: 500, color: location.pathname === '/' ? 'var(--primary)' : 'var(--text-main)' }}>Home</Link>
             <Link to="/courses" style={{ fontWeight: 500, color: location.pathname === '/courses' ? 'var(--primary)' : 'var(--text-main)' }}>Courses</Link>
+            
+            <Link to="/about" style={{ fontWeight: 500, color: location.pathname === '/about' ? 'var(--primary)' : 'var(--text-main)' }}>About Us</Link>
+            <Link to="/contact" style={{ fontWeight: 500, color: location.pathname === '/contact' ? 'var(--primary)' : 'var(--text-main)' }}>Contact</Link>
             {user && (
                 <Link to="/dashboard" style={{ fontWeight: 500, color: location.pathname === '/dashboard' ? 'var(--primary)' : 'var(--text-main)' }}>Dashboard</Link>
             )}
-            <Link to="/about" style={{ fontWeight: 500, color: location.pathname === '/about' ? 'var(--primary)' : 'var(--text-main)' }}>About Us</Link>
-            <Link to="/contact" style={{ fontWeight: 500, color: location.pathname === '/contact' ? 'var(--primary)' : 'var(--text-main)' }}>Contact</Link>
            </div>
         </div>
 

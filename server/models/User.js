@@ -35,8 +35,17 @@ const UserSchema = new mongoose.Schema({
         {
             assignmentId: String,
             score: Number,
+            submissionUrl: String,
+            fileName: String,
             completedAt: { type: Date, default: Date.now }
         }
+      ],
+      quizzes: [
+          {
+              quizId: String, // ID of the quiz from the Course model
+              score: Number,
+              completedAt: { type: Date, default: Date.now }
+          }
       ],
       completedContent: [
           { type: String } // Store IDs of completed video/pdf content

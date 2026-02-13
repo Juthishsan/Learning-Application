@@ -13,6 +13,10 @@ const CourseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  instructorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', // Reference to the User model (who is an instructor)
+  },
   price: {
     type: Number,
     required: true,
@@ -42,6 +46,27 @@ const CourseSchema = new mongoose.Schema({
           url: String,
           public_id: String,
           fileName: String
+      }
+  ],
+  assignments: [
+      {
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        dueDate: { type: Date },
+        createdAt: { type: Date, default: Date.now }
+      }
+  ],
+  quizzes: [
+      {
+        title: { type: String, required: true },
+        questions: [
+          {
+            question: { type: String, required: true },
+            options: [{ type: String, required: true }],
+            correctAnswer: { type: Number, required: true } // Index of the correct option (0-3)
+          }
+        ],
+        createdAt: { type: Date, default: Date.now }
       }
   ],
   createdAt: {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import AdminSidebar from '../components/AdminSidebar';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { motion } from 'framer-motion';
 import { User, Lock, Bell, Moon, Sun, Monitor, Save, Shield, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';

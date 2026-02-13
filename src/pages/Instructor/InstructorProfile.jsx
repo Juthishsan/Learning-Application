@@ -23,7 +23,7 @@ const InstructorProfile = () => {
     const handleSave = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`http://localhost:5000/api/users/${user.id || user._id}`, {
+            const res = await fetch(`http://localhost:5000/api/users/${user.id || user._id}/profile`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)

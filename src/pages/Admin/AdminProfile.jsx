@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import AdminSidebar from '../components/AdminSidebar';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { User, Mail, MapPin, Phone, Briefcase, Calendar, Shield, Globe, Github, Linkedin, Twitter, Camera, Edit2, X, Save, CheckCircle, Award, Users, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';

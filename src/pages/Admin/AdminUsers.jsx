@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import AdminSidebar from '../components/AdminSidebar';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { Trash2, Search, Mail, User, Calendar, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const AdminUsers = () => {
     const [users, setUsers] = useState([]);

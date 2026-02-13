@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
+const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 
 // Get all courses
@@ -148,6 +149,77 @@ router.post('/:id/content', courseUpload.single('file'), async (req, res) => {
     }
 });
 
+// @route   POST api/courses/:id/assignments
+// @desc    Add an assignment
+router.post('/:id/assignments', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ msg: 'Course not found' });
+
+        const newAssignment = req.body; // { title, description, dueDate }
+        course.assignments.push(newAssignment);
+        await course.save();
+
+        res.json(course.assignments);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   DELETE api/courses/:id/assignments/:assignId
+// @desc    Delete an assignment
+router.delete('/:id/assignments/:assignId', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ msg: 'Course not found' });
+
+        course.assignments = course.assignments.filter(a => a._id.toString() !== req.params.assignId);
+        await course.save();
+
+        res.json(course.assignments);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/courses/:id/quizzes
+// @desc    Add a quiz
+router.post('/:id/quizzes', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ msg: 'Course not found' });
+
+        // Expected body: { title, questions: [{ question, options: [], correctAnswer }] }
+        const newQuiz = req.body; 
+        course.quizzes.push(newQuiz);
+        await course.save();
+
+        res.json(course.quizzes);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   DELETE api/courses/:id/quizzes/:quizId
+// @desc    Delete a quiz
+router.delete('/:id/quizzes/:quizId', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ msg: 'Course not found' });
+
+        course.quizzes = course.quizzes.filter(q => q._id.toString() !== req.params.quizId);
+        await course.save();
+
+        res.json(course.quizzes);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   DELETE api/courses/:id/content/:contentId
 // @desc    Delete a content item
 router.delete('/:id/content/:contentId', async (req, res) => {
@@ -176,6 +248,41 @@ router.delete('/:id/content/:contentId', async (req, res) => {
         await course.save();
 
         res.json(course.content);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET api/courses/:id/gradebook
+// @desc    Get all students and their grades for a course
+router.get('/:id/gradebook', async (req, res) => {
+    try {
+        const courseId = req.params.id;
+        
+        // Find users enrolled in this course
+        // Note: This relies on the structure of enrolledCourses array in User model
+        const students = await User.find({
+            'enrolledCourses.courseId': courseId
+        }).select('name email enrolledCourses');
+
+        // Transform data to send only relevant course info per student
+        const gradebook = students.map(student => {
+            const enrollment = student.enrolledCourses.find(
+                e => e.courseId.toString() === courseId
+            );
+            
+            return {
+                studentId: student._id,
+                name: student.name,
+                email: student.email,
+                progress: enrollment.progress,
+                assignments: enrollment.assignments,
+                quizzes: enrollment.quizzes
+            };
+        });
+
+        res.json(gradebook);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

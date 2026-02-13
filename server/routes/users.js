@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Course = require('../models/Course');
+const Instructor = require('../models/Instructor');
 
 // Enroll in a Course
 router.post('/enroll', async (req, res) => {
@@ -58,6 +59,46 @@ router.post('/:userId/courses/:courseId/assignment', async (req, res) => {
 
         await user.save();
         res.json({ msg: 'Assignment saved', assignments: enrollment.assignments });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// Submit Quiz
+router.post('/:userId/courses/:courseId/quiz', async (req, res) => {
+    try {
+        const { quizId, score } = req.body;
+        const user = await User.findById(req.params.userId);
+        
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+
+        const enrollment = user.enrolledCourses.find(
+            e => e.courseId.toString() === req.params.courseId || (e.courseId._id && e.courseId._id.toString() === req.params.courseId)
+        );
+
+        if (!enrollment) {
+            return res.status(404).json({ msg: 'Course enrollment not found' });
+        }
+
+        // Initialize quiz array if needed
+        if (!enrollment.quizzes) enrollment.quizzes = [];
+
+        // Check if quiz already exists
+        const existingQuiz = enrollment.quizzes.find(q => q.quizId === quizId);
+        if (existingQuiz) {
+            // Keep the highest score, or update last attempt? Usually keep highest.
+            if (score > existingQuiz.score) {
+                 existingQuiz.score = score;
+            }
+            existingQuiz.completedAt = Date.now();
+        } else {
+            enrollment.quizzes.push({ quizId, score });
+        }
+
+        await user.save();
+        res.json({ msg: 'Quiz saved', quizzes: enrollment.quizzes });
 
     } catch (err) {
         console.error(err);
@@ -173,7 +214,52 @@ router.put('/:userId/preferences', async (req, res) => {
 });
 
 // Cloudinary Upload Config
-const { upload } = require('../config/cloudinary');
+const { upload, submissionUpload } = require('../config/cloudinary');
+
+// @route   POST api/users/:userId/courses/:courseId/assignments/:assignmentId/upload
+// @desc    Upload assignment submission
+router.post('/:userId/courses/:courseId/assignments/:assignmentId/upload', submissionUpload.single('file'), async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+
+        const enrollment = user.enrolledCourses.find(
+            e => e.courseId.toString() === req.params.courseId || (e.courseId._id && e.courseId._id.toString() === req.params.courseId)
+        );
+
+        if (!enrollment) return res.status(404).json({ msg: 'Enrollment not found' });
+
+        // Initialize assignments array if needed
+        if (!enrollment.assignments) enrollment.assignments = [];
+
+        const existingAssign = enrollment.assignments.find(a => a.assignmentId === req.params.assignmentId);
+        
+        const fileData = {
+            submissionUrl: req.file.path || req.file.secure_url,
+            fileName: req.file.originalname,
+            completedAt: new Date()
+        };
+
+        if (existingAssign) {
+            existingAssign.submissionUrl = fileData.submissionUrl;
+            existingAssign.fileName = fileData.fileName;
+            existingAssign.completedAt = fileData.completedAt;
+            // Status/Score remains pending unless auto-graded or instructor graded later
+        } else {
+            enrollment.assignments.push({
+                assignmentId: req.params.assignmentId,
+                ...fileData
+            });
+        }
+
+        await user.save();
+        res.json({ msg: 'Assignment submitted', assignments: enrollment.assignments });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
 
 // @route   POST api/users/:userId/resume
 // @desc    Upload user resume (PDF)
@@ -204,12 +290,14 @@ router.post('/:userId/resume', upload.single('resume'), async (req, res) => {
 // @access  Private
 router.put('/:userId/profile', async (req, res) => {
     try {
-        const { name, bio, socialLinks, resume, phone, location } = req.body;
+        const { name, bio, socialLinks, resume, phone, location, expertise } = req.body;
         const user = await User.findById(req.params.userId);
 
         if (!user) {
             return res.status(404).json({ msg: 'User not found' });
         }
+
+        const oldName = user.name;
 
         if (name) user.name = name;
         if (phone !== undefined) user.phone = phone;
@@ -226,7 +314,54 @@ router.put('/:userId/profile', async (req, res) => {
         }
 
         await user.save();
-        res.json(user);
+
+        // If user is an instructor, update their Instructor profile and Courses too
+        if (user.role === 'instructor') {
+            let instructorOldName = null;
+
+            // Update Instructor Collection
+            const instructor = await Instructor.findOne({ email: user.email });
+            if (instructor) {
+                instructorOldName = instructor.name; // Capture old name from Instructor DB
+                if (name) instructor.name = name;
+                if (bio) instructor.bio = bio;
+                // Map 'expertise' field from frontend to 'designation' in Instructor model
+                if (expertise) instructor.designation = expertise;
+                
+                await instructor.save();
+            }
+
+            // Update all Courses by this instructor
+            if (name) {
+                // 1. Update by instructorId (Best Practice)
+                await Course.updateMany(
+                    { instructorId: user._id },
+                    { $set: { instructor: name } }
+                );
+
+                // 2. Update by User's old name (Fallback)
+                if (oldName && name !== oldName) {
+                    await Course.updateMany(
+                        { instructor: oldName },
+                        { $set: { instructor: name, instructorId: user._id } } // Also backfill ID
+                    );
+                }
+
+                // 3. Update by Instructor's old name (Desync Fallback)
+                if (instructorOldName && instructorOldName !== name && instructorOldName !== oldName) {
+                    await Course.updateMany(
+                        { instructor: instructorOldName },
+                        { $set: { instructor: name, instructorId: user._id } } // Also backfill ID
+                    );
+                }
+            }
+        }
+
+        // Return updated user with expertise included for frontend state
+        const responseData = user.toObject();
+        if (expertise) responseData.expertise = expertise;
+
+        res.json(responseData);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

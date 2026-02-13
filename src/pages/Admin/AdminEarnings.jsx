@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import AdminSidebar from '../components/AdminSidebar';
+import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { Download, TrendingUp, Search, Filter } from 'lucide-react';
 import { motion } from 'framer-motion';
 
