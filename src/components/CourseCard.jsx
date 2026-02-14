@@ -13,7 +13,11 @@ const CourseCard = ({ course }) => {
     return (
         <Link to={`/course/${course._id}`} className="card" style={{ padding: 0, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', textDecoration: 'none', color: 'inherit' }}>
             <div style={{ height: '160px', background: getCategoryColor(course.category), display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.3s' }}>
-                <span style={{ fontSize: '3rem' }}>{course.thumbnail || '📚'}</span>
+                {course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) ? (
+                    <img src={course.thumbnail} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                    <span style={{ fontSize: '3rem' }}>{(course.thumbnail && course.thumbnail.length < 10) ? course.thumbnail : '📚'}</span>
+                )}
             </div>
             <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>

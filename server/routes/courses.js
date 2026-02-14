@@ -3,6 +3,7 @@ const router = express.Router();
 const Course = require('../models/Course');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
+const { courseUpload, cloudinary } = require('../config/cloudinary');
 
 // Get all courses
 router.get('/', async (req, res) => {
@@ -16,9 +17,16 @@ router.get('/', async (req, res) => {
 });
 
 // Create a course
-router.post('/', async (req, res) => {
+router.post('/', courseUpload.single('thumbnail'), async (req, res) => {
   try {
-    const newCourse = new Course(req.body);
+    const courseData = req.body;
+    
+    // Handle thumbnail file
+    if(req.file && req.file.path) {
+        courseData.thumbnail = req.file.path;
+    }
+
+    const newCourse = new Course(courseData);
     const course = await newCourse.save();
 
     const log = new ActivityLog({
@@ -50,9 +58,16 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update a course
-router.put('/:id', async (req, res) => {
+router.put('/:id', courseUpload.single('thumbnail'), async (req, res) => {
     try {
-        const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updateData = req.body;
+        
+        // Handle thumbnail file
+        if(req.file && req.file.path) {
+            updateData.thumbnail = req.file.path;
+        }
+
+        const course = await Course.findByIdAndUpdate(req.params.id, updateData, { new: true });
         
         const log = new ActivityLog({
             action: 'COURSE_UPDATED',
@@ -104,8 +119,7 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// Cloudinary Config for Courses
-const { courseUpload, cloudinary } = require('../config/cloudinary');
+
 
 // @route   POST api/courses/:id/content
 // @desc    Upload course content (video/pdf)

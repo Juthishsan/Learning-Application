@@ -69,7 +69,7 @@ const UserProfile = () => {
     if (!user) return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Please log in to view profile.</div>;
 
     return (
-        <div style={{ background: '#f8fafc', minHeight: '100vh', width: '100%', paddingBottom: '4rem' }}>
+        <div style={{ background: 'transparent', minHeight: '100vh', width: '100%', paddingBottom: '4rem' }}>
             <div className="container" style={{ maxWidth: '1100px', paddingTop: '100px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
                 
                 {/* Header Section */}
@@ -257,8 +257,12 @@ const UserProfile = () => {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     {enrolledCourses.slice(0, 3).map((enrollment, idx) => (
                                         <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'background 0.2s' }} onClick={() => navigate(`/course-content/${enrollment.courseId?._id}`)} className="hover:bg-slate-50">
-                                            <div style={{ width: '50px', height: '50px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
-                                                {enrollment.courseId?.thumbnail || '📚'}
+                                            <div style={{ width: '50px', height: '50px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', overflow: 'hidden' }}>
+                                                {enrollment.courseId?.thumbnail && (enrollment.courseId.thumbnail.startsWith('http') || enrollment.courseId.thumbnail.startsWith('/')) ? (
+                                                    <img src={enrollment.courseId.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    (enrollment.courseId?.thumbnail && enrollment.courseId.thumbnail.length < 10) ? enrollment.courseId.thumbnail : '📚'
+                                                )}
                                             </div>
                                             <div style={{ flex: 1 }}>
                                                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.25rem' }}>{enrollment.courseId?.title}</h4>

@@ -8,7 +8,6 @@ const Hero = () => {
     return (
         <section style={{ 
             padding: '6rem 2rem', 
-            background: 'radial-gradient(circle at 50% 50%, #fdfbf7 0%, #fff 100%)', 
             position: 'relative', 
             overflow: 'hidden' 
         }}>
@@ -217,10 +216,10 @@ const Home = () => {
     }, []);
 
     return (
-        <div style={{ fontFamily: "'Inter', sans-serif", background: '#fdfbf7' }}>
+        <div style={{ fontFamily: "'Inter', sans-serif" }}>
             <Hero />
             
-            <section style={{ padding: '6rem 2rem', background: '#f8fafc' }}>
+            <section style={{ padding: '6rem 2rem', background: 'transparent' }}>
                 <div className="container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
                     <div style={{ marginBottom: '4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'end', flexWrap: 'wrap', gap: '2rem' }}>
                         <div>
@@ -236,10 +235,10 @@ const Home = () => {
                             padding: '0.75rem 1.5rem', 
                             background: 'white', 
                             borderRadius: '50px', 
-                            textDecoration: 'none',
-                            border: '1px solid #e2e8f0',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                            textDecoration: 'none', 
+                            border: '1px solid #e2e8f0', 
+                            transition: 'all 0.2s', 
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' 
                         }}>
                             View all courses <ArrowRight size={18} />
                         </Link>
@@ -248,7 +247,7 @@ const Home = () => {
                     {loading ? (
                         <div style={{ display: 'flex', gap: '2rem' }}>
                             {[1, 2, 3].map(i => (
-                                <div key={i} style={{ flex: 1, height: '400px', background: '#e2e8f0', borderRadius: '16px' }} className="animate-pulse"></div>
+                                <div key={i} style={{ flex: 1, height: '400px', background: 'rgba(255,255,255,0.5)', borderRadius: '16px' }} className="animate-pulse"></div>
                             ))}
                         </div>
                     ) : (
@@ -262,7 +261,7 @@ const Home = () => {
             </section>
 
              {/* Features / Benefits Section */}
-             <section style={{ padding: '6rem 2rem', background: '#fff' }}>
+             <section style={{ padding: '6rem 2rem', background: 'transparent' }}>
                 <div className="container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                          <h2 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem', letterSpacing: '-0.5px' }}>Why Choose Us?</h2>

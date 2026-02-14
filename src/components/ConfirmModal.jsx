@@ -1,6 +1,7 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 const ConfirmModal = ({ 
     isOpen, 
@@ -10,50 +11,100 @@ const ConfirmModal = ({
     message, 
     confirmText = "Delete", 
     cancelText = "Cancel",
-    isDestructive = true
+    isDestructive = true,
+    icon: Icon = AlertTriangle
 }) => {
-    if (!isOpen) return null;
+    // Prevent scrolling when modal is open
+    React.useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+             document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
 
-    return (
+    return createPortal(
         <AnimatePresence>
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="card" 
-                    style={{ width: '400px', padding: '0', borderRadius: '16px', background: 'white', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0' }}
-                >
-                    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: isDestructive ? '#fee2e2' : '#e0e7ff', color: isDestructive ? '#ef4444' : '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                            <AlertTriangle size={24} />
+            {isOpen && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                        style={{ 
+                            background: 'white', 
+                            padding: '2rem', 
+                            borderRadius: '24px', 
+                            maxWidth: '420px', 
+                            width: '90%', 
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', 
+                            border: '1px solid rgba(255,255,255,0.5)' 
+                        }}
+                    >
+                        <div style={{ 
+                            width: '64px', height: '64px', 
+                            background: isDestructive ? '#fee2e2' : '#e0e7ff', 
+                            borderRadius: '20px', 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                            margin: '0 auto 1.5rem', 
+                            color: isDestructive ? '#ef4444' : '#4f46e5' 
+                        }}>
+                            <Icon size={32} strokeWidth={2.5} />
                         </div>
                         
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>{title}</h3>
-                        <p style={{ color: '#64748b', fontSize: '0.95rem', lineHeight: '1.5' }}>{message}</p>
-                    </div>
+                        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>{title}</h3>
+                            <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: 1.5 }}>{message}</p>
+                        </div>
 
-                    <div style={{ padding: '1.25rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '1rem', borderRadius: '0 0 16px 16px' }}>
-                        <button 
-                            onClick={onClose} 
-                            style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
-                            onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} 
-                            onMouseOut={e => e.currentTarget.style.background = 'white'}
-                        >
-                            {cancelText}
-                        </button>
-                        <button 
-                            onClick={() => { onConfirm(); onClose(); }} 
-                            style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: isDestructive ? '#ef4444' : '#4f46e5', color: 'white', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                            onMouseOver={e => e.currentTarget.style.filter = 'brightness(110%)'} 
-                            onMouseOut={e => e.currentTarget.style.filter = 'brightness(100%)'}
-                        >
-                            {confirmText}
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-        </AnimatePresence>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <button 
+                                onClick={onClose}
+                                style={{ 
+                                    padding: '1rem', 
+                                    borderRadius: '14px', 
+                                    background: '#f1f5f9', 
+                                    color: '#475569', 
+                                    fontWeight: 700, 
+                                    fontSize: '0.95rem', 
+                                    transition: 'all 0.2s',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                                onMouseOver={e => e.target.style.background = '#e2e8f0'}
+                                onMouseOut={e => e.target.style.background = '#f1f5f9'}
+                            >
+                                {cancelText}
+                            </button>
+                            <button 
+                                onClick={() => { onConfirm(); onClose(); }}
+                                style={{ 
+                                    padding: '1rem', 
+                                    borderRadius: '14px', 
+                                    background: isDestructive ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', 
+                                    color: 'white', 
+                                    fontWeight: 700, 
+                                    fontSize: '0.95rem', 
+                                    transition: 'all 0.2s',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    boxShadow: isDestructive ? '0 4px 12px -2px rgba(239, 68, 68, 0.3)' : '0 4px 12px -2px rgba(79, 70, 229, 0.3)'
+                                }}
+                                onMouseOver={e => e.target.style.transform = 'translateY(-2px)'}
+                                onMouseOut={e => e.target.style.transform = 'translateY(0)'}
+                            >
+                                {confirmText}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>,
+        document.body
     );
 };
 

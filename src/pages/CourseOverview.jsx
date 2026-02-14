@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, Clock, Users, CheckCircle, Award, Video, FileText, Lock, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../components/ConfirmModal';
 
 const CourseOverview = () => {
     const { id } = useParams();
@@ -10,6 +11,7 @@ const CourseOverview = () => {
     const [loading, setLoading] = useState(true);
     const [enrolling, setEnrolling] = useState(false);
     const [isEnrolled, setIsEnrolled] = useState(false);
+    const [showEnrollConfirm, setShowEnrollConfirm] = useState(false);
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -43,7 +45,7 @@ const CourseOverview = () => {
         checkEnrollment();
     }, [id]);
 
-    const handleEnroll = async () => {
+    const handleEnroll = () => {
         if (isEnrolled) {
             navigate(`/course-content/${id}`);
             return;
@@ -56,6 +58,11 @@ const CourseOverview = () => {
             return;
         }
 
+        setShowEnrollConfirm(true);
+    };
+
+    const performEnroll = async () => {
+        const storedUser = localStorage.getItem('user');
         const user = JSON.parse(storedUser);
         setEnrolling(true);
 
@@ -79,6 +86,7 @@ const CourseOverview = () => {
             toast.error('Enrollment failed');
         } finally {
             setEnrolling(false);
+            setShowEnrollConfirm(false);
         }
     };
 
@@ -86,9 +94,19 @@ const CourseOverview = () => {
     if (!course) return <div style={{ padding: '4rem', textAlign: 'center' }}>Course not found</div>;
 
     return (
-        <div style={{ background: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
             {/* Hero Section */}
             <div style={{ background: '#0f172a', color: 'white', padding: '5rem 0 10rem', position: 'relative', overflow: 'hidden' }}>
+                {course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) && (
+                    <div style={{ 
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+                        backgroundImage: `url(${course.thumbnail})`, 
+                        backgroundSize: 'cover', 
+                        backgroundPosition: 'center', 
+                        opacity: 0.15,
+                        filter: 'blur(8px)'
+                    }}></div>
+                )}
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at 70% 30%, rgba(14, 165, 233, 0.2), transparent 50%)' }}></div>
                 
                 <div className="container" style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '4rem', alignItems: 'center' }}>
@@ -198,9 +216,22 @@ const CourseOverview = () => {
                         <div style={{ position: 'sticky', top: '100px', background: 'white', padding: '2rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', border: '1px solid #e2e8f0' }}>
                             
                             {/* Check if video exists for preview */}
-                            <div style={{ marginBottom: '1.5rem', borderRadius: '12px', overflow: 'hidden', height: '180px', background: '#0f172a', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <PlayCircle size={64} color="white" style={{ opacity: 0.9 }} />
-                                <div style={{ position: 'absolute', bottom: '1rem', width: '100%', textAlign: 'center', color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>Preview this course</div>
+                            <div style={{ 
+                                marginBottom: '1.5rem', 
+                                borderRadius: '12px', 
+                                overflow: 'hidden', 
+                                height: '180px', 
+                                background: course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) ? `url(${course.thumbnail})` : '#0f172a',
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                position: 'relative', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center' 
+                            }}>
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }}></div>
+                                <PlayCircle size={64} color="white" style={{ opacity: 0.9, position: 'relative', zIndex: 2 }} />
+                                <div style={{ position: 'absolute', bottom: '1rem', width: '100%', textAlign: 'center', color: 'white', fontWeight: 600, fontSize: '0.9rem', zIndex: 2 }}>Preview this course</div>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -262,6 +293,18 @@ const CourseOverview = () => {
                 .container { margin-top: 0 !important; }
             }
             `}</style>
+
+            <ConfirmModal
+                isOpen={showEnrollConfirm}
+                onClose={() => setShowEnrollConfirm(false)}
+                onConfirm={performEnroll}
+                title="Confirm Enrollment"
+                message={`Are you sure you want to enroll in "${course.title}"? This will give you instant access to all course materials.`}
+                confirmText="Yes, Enroll Now"
+                cancelText="Maybe Later"
+                isDestructive={false}
+                icon={CheckCircle}
+            />
         </div>
     );
 };

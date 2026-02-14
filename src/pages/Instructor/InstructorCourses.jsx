@@ -31,8 +31,9 @@ const InstructorCourses = () => {
     const user = JSON.parse(localStorage.getItem('user'));
 
     const [formData, setFormData] = useState({
-        title: '', description: '', instructor: user?.name || '', price: '', category: '', thumbnail: '📚'
+        title: '', description: '', instructor: user?.name || '', price: '', category: '', thumbnail: ''
     });
+    const [thumbnailFile, setThumbnailFile] = useState(null);
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         title: '',
@@ -79,17 +80,28 @@ const InstructorCourses = () => {
     const handleCreate = async (e) => {
         e.preventDefault();
         try {
-            const payload = { ...formData, instructor: user.name, instructorId: user.id || user._id }; // Ensure current user ID is set
+            const formDataPayload = new FormData();
+            formDataPayload.append('title', formData.title);
+            formDataPayload.append('description', formData.description);
+            formDataPayload.append('instructor', user.name);
+            formDataPayload.append('instructorId', user.id || user._id);
+            formDataPayload.append('price', formData.price);
+            formDataPayload.append('category', formData.category);
+            if (thumbnailFile) {
+                formDataPayload.append('thumbnail', thumbnailFile);
+            }
+
             const response = await fetch('http://localhost:5000/api/courses', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: formDataPayload
             });
             if (!response.ok) {
                 throw new Error('Failed to create course');
             }
             setIsModalOpen(false);
-            setFormData({ title: '', description: '', instructor: user.name, price: '', category: '', thumbnail: '📚' });
+            setIsModalOpen(false);
+            setFormData({ title: '', description: '', instructor: user.name, price: '', category: '', thumbnail: '' });
+            setThumbnailFile(null);
             fetchCourses();
             toast.success('Course created successfully!');
         } catch (error) {
@@ -305,25 +317,37 @@ const InstructorCourses = () => {
             instructor: course.instructor,
             price: course.price,
             category: course.category,
-            thumbnail: course.thumbnail || '📚'
+            category: course.category,
+            thumbnail: course.thumbnail || ''
         });
+        setThumbnailFile(null);
         setIsEditModalOpen(true);
     };
 
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
+            const formDataPayload = new FormData();
+            formDataPayload.append('title', formData.title);
+            formDataPayload.append('description', formData.description);
+            formDataPayload.append('instructor', formData.instructor);
+            formDataPayload.append('price', formData.price);
+            formDataPayload.append('category', formData.category);
+            if (thumbnailFile) {
+                formDataPayload.append('thumbnail', thumbnailFile);
+            }
+
             const response = await fetch(`http://localhost:5000/api/courses/${editingId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: formDataPayload
             });
             if (!response.ok) {
                 throw new Error('Failed to update course');
             }
             setIsEditModalOpen(false);
             setEditingId(null);
-            setFormData({ title: '', description: '', instructor: user.name, price: '', category: '', thumbnail: '📚' });
+            setFormData({ title: '', description: '', instructor: user.name, price: '', category: '', thumbnail: '' });
+            setThumbnailFile(null);
             fetchCourses();
             toast.success('Course updated successfully!');
         } catch (error) {
@@ -339,40 +363,63 @@ const InstructorCourses = () => {
     };
 
     return (
-        <div style={{ display: 'flex', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ display: 'flex', background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
             <InstructorSidebar />
-            <main style={{ flex: 1, padding: '2.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+            <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
                     <div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#1e293b', letterSpacing: '-0.5px' }}>My Courses</h1>
-                        <p style={{ color: '#64748b', marginTop: '0.25rem' }}>Create and manage your courses</p>
+                        <h1 style={{ fontSize: '2.25rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>My Courses</h1>
+                        <p style={{ color: '#64748b', marginTop: '0.25rem', fontSize: '1.1rem' }}>Manage your portfolio and create new learning experiences.</p>
                     </div>
-                    <button onClick={() => setIsModalOpen(true)} className="btn" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.3)', transition: 'transform 0.2s', border: 'none', fontWeight: 600, cursor: 'pointer' }} onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                        <Plus size={20} /> Create New Course
+                    <button 
+                        onClick={() => setIsModalOpen(true)} 
+                        style={{ 
+                            background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', 
+                            color: 'white', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem', 
+                            padding: '1rem 2rem', 
+                            borderRadius: '16px', 
+                            boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.4)', 
+                            border: 'none', 
+                            fontWeight: 700, 
+                            cursor: 'pointer',
+                            fontSize: '0.95rem'
+                        }}
+                    >
+                        <Plus size={22} /> Create New Course
                     </button>
-                </div>
+                </header>
 
-                <div className="card" style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                <div className="card" style={{ background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
                     
-                    {/* Toolbar - Matching InstructorStudents style */}
-                    <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                        <div style={{ position: 'relative', width: '300px' }}>
-                            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    {/* Toolbar */}
+                    <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '1.5rem', alignItems: 'center', background: '#ffffff' }}>
+                        <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                            <Search size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input 
-                                placeholder="Search courses..." 
+                                placeholder="Search courses by name or category..." 
                                 style={{ 
                                     width: '100%', 
-                                    padding: '0.6rem 1rem 0.6rem 2.5rem', 
-                                    borderRadius: '8px', 
+                                    padding: '0.85rem 1rem 0.85rem 3rem', 
+                                    borderRadius: '14px', 
                                     border: '1px solid #e2e8f0', 
                                     outline: 'none', 
                                     background: '#f8fafc',
-                                    fontSize: '0.9rem'
+                                    fontSize: '0.95rem',
+                                    color: '#475569'
                                 }} 
                             />
                         </div>
-                        <div style={{ flex: 1 }}></div>
-                        <button style={{ padding: '0.6rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', fontWeight: 500, cursor: 'pointer', fontSize: '0.9rem' }}>Filter</button>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button style={{ padding: '0.75rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <FileText size={18} /> Category
+                            </button>
+                            <button style={{ padding: '0.75rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                Sort By
+                            </button>
+                        </div>
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -398,7 +445,11 @@ const InstructorCourses = () => {
                                     <td style={{ padding: '1.25rem 1.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ffedd5', color: '#fb923c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.9rem' }}>
-                                                {course.title.charAt(0)}
+                                                {course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) ? (
+                                                    <img src={course.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                                ) : (
+                                                    course.title.charAt(0)
+                                                )}
                                             </div>
                                             <div>
                                                 <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.95rem' }}>{course.title}</div>
@@ -569,6 +620,13 @@ const InstructorCourses = () => {
                                         {COURSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Course Thumbnail</label>
+                                <input type="file" onChange={e => setThumbnailFile(e.target.files[0])} accept="image/*" style={{ ...inputStyle, padding: '0.5rem', background: 'white' }} />
+                                {formData.thumbnail && !thumbnailFile && typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('http') && (
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Current thumbnail: <a href={formData.thumbnail} target="_blank" rel="noopener noreferrer">View</a></div>
+                                )}
                             </div>
                             <div><label style={labelStyle}>Description</label><textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ ...inputStyle, minHeight: '100px' }} /></div>
                             <button type="submit" style={{ padding: '1rem', background: '#4f46e5', color: 'white', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer' }}>{isEditModalOpen ? 'Save Changes' : 'Create Course'}</button>

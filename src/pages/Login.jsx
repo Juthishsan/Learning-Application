@@ -52,11 +52,7 @@ const Login = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', position: 'relative', overflow: 'hidden' }}>
-      
-      {/* Abstract Background Shapes */}
-      <div style={{ position: 'absolute', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0) 70%)', top: '-150px', left: '-100px', borderRadius: '50%', pointerEvents: 'none' }}></div>
-      <div style={{ position: 'absolute', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(236,72,153,0.1) 0%, rgba(236,72,153,0) 70%)', bottom: '-100px', right: '-50px', borderRadius: '50%', pointerEvents: 'none' }}></div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', position: 'relative', overflow: 'hidden' }}>
 
       <motion.div 
         initial={{ opacity: 0, y: 30 }}

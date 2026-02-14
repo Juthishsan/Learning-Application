@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BookOpen, Clock, Award, BarChart2, Settings, LogOut, Play, Compass, Filter, CheckCircle, AlertCircle, FileText, ArrowRight, HelpCircle, Bell, Search, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PersonalizationModal from '../components/PersonalizationModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { motion } from 'framer-motion';
 
 const Dashboard = () => {
@@ -11,6 +12,7 @@ const Dashboard = () => {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [isPersonalizeOpen, setIsPersonalizeOpen] = useState(false);
   const [assignmentFilter, setAssignmentFilter] = useState('all');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
      const storedUser = localStorage.getItem('user');
@@ -187,8 +189,12 @@ const Dashboard = () => {
                                     style={{ padding: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', borderRadius: '16px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1.5rem' }} 
                                     onClick={() => navigate(`/course-content/${enrollment.courseId?._id}`)}
                                 >
-                                     <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', flexShrink: 0 }}>
-                                        {enrollment.courseId?.thumbnail || '🎓'}
+                                     <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', flexShrink: 0, overflow: 'hidden' }}>
+                                        {enrollment.courseId?.thumbnail && (enrollment.courseId.thumbnail.startsWith('http') || enrollment.courseId.thumbnail.startsWith('/')) ? (
+                                            <img src={enrollment.courseId.thumbnail} alt={enrollment.courseId.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            (enrollment.courseId?.thumbnail && enrollment.courseId.thumbnail.length < 10) ? enrollment.courseId.thumbnail : '🎓'
+                                        )}
                                      </div>
                                      <div style={{ flex: 1 }}>
                                          <h4 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.25rem', color: '#1e293b' }}>{enrollment.courseId?.title || 'Untitled Course'}</h4>
@@ -310,8 +316,12 @@ const Dashboard = () => {
                             style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', cursor: 'pointer' }}
                             onClick={() => navigate(`/course-content/${enrollment.courseId?._id}`)}
                         >
-                             <div style={{ height: '180px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', borderBottom: '1px solid #e2e8f0' }}>
-                                {enrollment.courseId?.thumbnail || '🎓'}
+                             <div style={{ height: '180px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', borderBottom: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                                {enrollment.courseId?.thumbnail && (enrollment.courseId.thumbnail.startsWith('http') || enrollment.courseId.thumbnail.startsWith('/')) ? (
+                                    <img src={enrollment.courseId.thumbnail} alt={enrollment.courseId.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    (enrollment.courseId?.thumbnail && enrollment.courseId.thumbnail.length < 10) ? enrollment.courseId.thumbnail : '🎓'
+                                )}
                              </div>
                              <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ marginBottom: '1rem' }}>
@@ -540,7 +550,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div style={{ background: '#f8fafc', minHeight: 'calc(100vh - 80px)', display: 'flex', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ background: 'transparent', minHeight: 'calc(100vh - 80px)', display: 'flex', fontFamily: "'Inter', sans-serif" }}>
       {/* Sidebar */}
       <aside style={{ width: '280px', background: '#fff', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', boxShadow: '1px 0 0 #f1f5f9', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }} className="hidden-mobile">
         <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0.5rem' }}>
@@ -613,10 +623,7 @@ const Dashboard = () => {
              </div>
 
              <button 
-                onClick={() => {
-                    localStorage.removeItem('user');
-                    navigate('/login');
-                }}
+                onClick={() => setShowLogoutConfirm(true)}
                 style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -675,6 +682,21 @@ const Dashboard = () => {
             />
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+            localStorage.removeItem('user');
+            navigate('/login');
+        }}
+        title="Sign Out?"
+        message="Are you sure you want to sign out? You will need to log in again to access your courses."
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        isDestructive={true}
+        icon={LogOut}
+      />
 
       <style jsx>{`
         @media (max-width: 900px) {

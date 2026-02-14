@@ -2,11 +2,13 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, BookOpen, Users, LogOut, Settings, GraduationCap, User, IndianRupee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../ConfirmModal';
 
 const AdminSidebar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [active, setActive] = useState('');
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     useEffect(() => {
         const path = location.pathname;
@@ -20,6 +22,10 @@ const AdminSidebar = () => {
     }, [location]);
 
     const handleLogout = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    const performLogout = () => {
         localStorage.removeItem('user');
         toast.success('Logged out successfully');
         navigate('/login');
@@ -38,7 +44,7 @@ const AdminSidebar = () => {
         <aside style={{ width: '260px', background: '#0f172a', color: 'white', display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0 }}>
             <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: 'var(--primary)' }}>Edu</span>Admin
+                    <span style={{ color: 'var(--primary)' }}>EroSkillUp</span>Admin
                 </h2>
             </div>
             
@@ -83,6 +89,18 @@ const AdminSidebar = () => {
                     <LogOut size={18} /> Sign Out
                 </button>
             </div>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={performLogout}
+                title="Sign Out?"
+                message="Are you sure you want to sign out of the Admin Portal?"
+                confirmText="Sign Out"
+                cancelText="Cancel"
+                isDestructive={true}
+                icon={LogOut}
+            />
         </aside>
     );
 };

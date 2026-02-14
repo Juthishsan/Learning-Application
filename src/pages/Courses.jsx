@@ -1,14 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Search, Filter, BookOpen } from 'lucide-react';
 import CourseCard from '../components/CourseCard';
 import { motion } from 'framer-motion';
 
 const Courses = () => {
+    const location = useLocation();
     const [courses, setCourses] = useState([]);
     const [filteredCourses, setFilteredCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const searchParam = params.get('search');
+        if (searchParam) {
+            setSearchTerm(searchParam);
+        }
+    }, [location.search]);
 
     useEffect(() => {
         const fetchCourses = async () => {
@@ -63,7 +73,7 @@ const Courses = () => {
     ];
 
     return (
-        <div style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: '4rem' }}>
+        <div style={{ background: 'transparent', minHeight: '100vh', paddingBottom: '4rem' }}>
             {/* Header */}
             <div style={{ background: '#0f172a', color: 'white', padding: '3rem 0 5rem' }}>
                 <div className="container" style={{ textAlign: 'center', maxWidth: '800px' }}>
