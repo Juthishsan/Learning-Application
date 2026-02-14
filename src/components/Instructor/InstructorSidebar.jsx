@@ -3,7 +3,7 @@ import { LayoutDashboard, BookOpen, Users, User, Settings, LogOut, ChevronRight 
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import ConfirmModal from '../ConfirmModal';
+import ConfirmModal from '../Modals/ConfirmModal';
 
 const InstructorSidebar = () => {
     const location = useLocation();

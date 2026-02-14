@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Search, Filter, BookOpen } from 'lucide-react';
-import CourseCard from '../components/CourseCard';
+import CourseCard from '../../components/Common/CourseCard';
 import { motion } from 'framer-motion';
 
 const Courses = () => {

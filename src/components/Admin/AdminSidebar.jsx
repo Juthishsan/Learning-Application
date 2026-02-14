@@ -2,7 +2,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, BookOpen, Users, LogOut, Settings, GraduationCap, User, IndianRupee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../ConfirmModal';
+import ConfirmModal from '../Modals/ConfirmModal';
 
 const AdminSidebar = () => {
     const location = useLocation();

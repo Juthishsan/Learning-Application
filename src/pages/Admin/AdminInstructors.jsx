@@ -3,7 +3,7 @@ import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { Plus, Trash2, Search, Mail, BookOpen, User, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../../components/ConfirmModal';
+import ConfirmModal from '../../components/Modals/ConfirmModal';
 
 const AdminInstructors = () => {
     const [instructors, setInstructors] = useState([]);

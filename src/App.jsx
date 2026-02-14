@@ -1,17 +1,17 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer'; // Import Footer
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Dashboard from './pages/Dashboard';
-import UserProfile from './pages/UserProfile';
-import Courses from './pages/Courses';
-import CourseOverview from './pages/CourseOverview';
-import CourseContent from './pages/CourseContent';
-import About from './pages/About';
-import Contact from './pages/Contact';
+import Navbar from './components/Common/Navbar';
+import Footer from './components/Common/Footer'; // Import Footer
+import Home from './pages/Learner/Home';
+import Login from './pages/Auth/Login';
+import Signup from './pages/Auth/Signup';
+import Dashboard from './pages/Learner/Dashboard';
+import UserProfile from './pages/Learner/UserProfile';
+import Courses from './pages/Learner/Courses';
+import CourseOverview from './pages/Learner/CourseOverview';
+import CourseContent from './pages/Learner/CourseContent';
+import About from './pages/Learner/About';
+import Contact from './pages/Learner/Contact';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminSettings from './pages/Admin/AdminSettings';

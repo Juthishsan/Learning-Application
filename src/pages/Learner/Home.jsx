@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Award, Users, PlayCircle, Zap, Shield, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import CourseCard from '../components/CourseCard';
+import CourseCard from '../../components/Common/CourseCard';
 
 const Hero = () => {
     return (

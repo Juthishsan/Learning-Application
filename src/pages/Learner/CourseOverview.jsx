@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, Clock, Users, CheckCircle, Award, Video, FileText, Lock, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../components/ConfirmModal';
+import ConfirmModal from '../../components/Modals/ConfirmModal';
 
 const CourseOverview = () => {
     const { id } = useParams();

@@ -1,11 +1,11 @@
 
 import { useEffect, useState } from 'react';
 import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
-import GradebookModal from './GradebookModal';
+import GradebookModal from '../../components/Instructor/GradebookModal';
 import { Plus, Trash2, Edit, Search, X as XIcon, FileText, Video, Image as ImageIcon, MoreVertical, Users, BookOpen, ClipboardList, CheckSquare, PlusCircle, Trash, GraduationCap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../../components/ConfirmModal';
+import ConfirmModal from '../../components/Modals/ConfirmModal';
 
 const InstructorCourses = () => {
     const COURSE_CATEGORIES = [

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Clock, Award, BarChart2, Settings, LogOut, Play, Compass, Filter, CheckCircle, AlertCircle, FileText, ArrowRight, HelpCircle, Bell, Search, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import PersonalizationModal from '../components/PersonalizationModal';
-import ConfirmModal from '../components/ConfirmModal';
+import PersonalizationModal from '../../components/Modals/PersonalizationModal';
+import ConfirmModal from '../../components/Modals/ConfirmModal';
 import { motion } from 'framer-motion';
 
 const Dashboard = () => {

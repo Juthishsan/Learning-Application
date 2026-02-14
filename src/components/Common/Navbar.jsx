@@ -3,7 +3,7 @@ import { BookOpen, Search, User, Menu, X, LogOut, Settings, Bell, ChevronDown, C
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import ConfirmModal from './ConfirmModal';
+import ConfirmModal from '../Modals/ConfirmModal';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);

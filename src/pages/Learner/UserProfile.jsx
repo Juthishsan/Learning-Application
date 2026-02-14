@@ -3,9 +3,9 @@ import { User, Mail, Award, BookOpen, Calendar, Edit3, Camera, Globe, Linkedin, 
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import PersonalizationModal from '../components/PersonalizationModal';
-import EditProfileModal from '../components/EditProfileModal';
-import ChangePasswordModal from '../components/ChangePasswordModal';
+import PersonalizationModal from '../../components/Modals/PersonalizationModal';
+import EditProfileModal from '../../components/Modals/EditProfileModal';
+import ChangePasswordModal from '../../components/Modals/ChangePasswordModal';
 
 const UserProfile = () => {
     const navigate = useNavigate();

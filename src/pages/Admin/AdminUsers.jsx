@@ -3,7 +3,7 @@ import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { Trash2, Search, Mail, User, Calendar, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../../components/ConfirmModal';
+import ConfirmModal from '../../components/Modals/ConfirmModal';
 
 const AdminUsers = () => {
     const [users, setUsers] = useState([]);
