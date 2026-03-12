@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, Eye, EyeOff, Save, Key } from 'lucide-react';
+import { X, Lock, Eye, EyeOff, Save, Key, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
@@ -14,22 +14,28 @@ const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
         newPassword: '',
         confirmPassword: ''
     });
+    const [errors, setErrors] = useState({});
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (formData.newPassword !== formData.confirmPassword) {
-            return toast.error("New passwords don't match");
-        }
+        const newErrors = {};
+        if (!formData.currentPassword) newErrors.currentPassword = "Required";
+        if (!formData.newPassword) newErrors.newPassword = "Required";
+        else if (formData.newPassword.length < 6) newErrors.newPassword = "Password must be at least 6 characters";
+        if (formData.newPassword !== formData.confirmPassword) newErrors.confirmPassword = "New passwords don't match";
         
-        if (formData.newPassword.length < 6) {
-            return toast.error("Password must be at least 6 characters");
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
         }
 
+        setErrors({});
         setLoading(true);
         try {
             const res = await fetch(`http://localhost:5000/api/users/${userId}/password`, {
@@ -80,7 +86,7 @@ const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ padding: '2rem' }}>
+                <form onSubmit={handleSubmit} noValidate style={{ padding: '2rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         
                         {/* Current Password */}
@@ -92,14 +98,14 @@ const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
                                     name="currentPassword" 
                                     value={formData.currentPassword} 
                                     onChange={handleChange} 
-                                    style={inputStyle} 
+                                    style={{ ...inputStyle, borderColor: errors.currentPassword ? '#ef4444' : '#cbd5e1', background: errors.currentPassword ? '#fef2f2' : '#f8fafc' }} 
                                     placeholder="Enter current password"
-                                    required 
                                 />
                                 <button type="button" onClick={() => setShowCurrent(!showCurrent)} style={toggleStyle}>
                                     {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
+                            {errors.currentPassword && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.currentPassword}</div>}
                         </div>
 
                         {/* New Password */}
@@ -111,14 +117,14 @@ const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
                                     name="newPassword" 
                                     value={formData.newPassword} 
                                     onChange={handleChange} 
-                                    style={inputStyle} 
+                                    style={{ ...inputStyle, borderColor: errors.newPassword ? '#ef4444' : '#cbd5e1', background: errors.newPassword ? '#fef2f2' : '#f8fafc' }} 
                                     placeholder="Enter new password"
-                                    required 
                                 />
                                 <button type="button" onClick={() => setShowNew(!showNew)} style={toggleStyle}>
                                     {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
+                            {errors.newPassword && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.newPassword}</div>}
                         </div>
 
                         {/* Confirm Password */}
@@ -130,14 +136,14 @@ const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
                                     name="confirmPassword" 
                                     value={formData.confirmPassword} 
                                     onChange={handleChange} 
-                                    style={inputStyle} 
+                                    style={{ ...inputStyle, borderColor: errors.confirmPassword ? '#ef4444' : '#cbd5e1', background: errors.confirmPassword ? '#fef2f2' : '#f8fafc' }} 
                                     placeholder="Confirm new password"
-                                    required 
                                 />
                                 <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={toggleStyle}>
                                     {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
+                            {errors.confirmPassword && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.confirmPassword}</div>}
                         </div>
 
                     </div>

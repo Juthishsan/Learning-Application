@@ -18,6 +18,24 @@ const AdminSchema = new mongoose.Schema({
     type: String,
     default: 'admin',
   },
+  phone: {
+    type: String,
+  },
+  location: {
+    type: String,
+  },
+  bio: {
+    type: String,
+  },
+  resume: {
+     type: String
+  },
+  socialLinks: {
+    website: String,
+    github: String,
+    linkedin: String,
+    twitter: String
+  },
   createdAt: {
     type: Date,
     default: Date.now,

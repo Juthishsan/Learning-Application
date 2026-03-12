@@ -101,7 +101,7 @@ const Courses = () => {
             </div>
 
             {/* Main Content with Sidebar */}
-            <div className="container" style={{ marginTop: '-3rem', display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+            <div className="container" style={{ marginTop: '-3rem', display: 'flex', gap: '2rem', alignItems: 'flex-start', maxWidth: '1600px' }}>
                 
                 {/* Visual Sidebar for Filters */}
                 <div className="card" style={{ width: '300px', padding: '1.5rem', position: 'sticky', top: '2rem', flexShrink: 0, maxHeight: '80vh', overflowY: 'auto' }}>
@@ -167,7 +167,7 @@ const Courses = () => {
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '4rem' }}>Loading catalog...</div>
                     ) : filteredCourses.length > 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
                             {filteredCourses.map((course, idx) => (
                                 <motion.div 
                                     key={course._id || idx}

@@ -45,7 +45,8 @@ const CourseSchema = new mongoose.Schema({
           type: { type: String, enum: ['video', 'pdf', 'image'] },
           url: String,
           public_id: String,
-          fileName: String
+          fileName: String,
+          description: String
       }
   ],
   assignments: [

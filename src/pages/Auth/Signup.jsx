@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, BookOpen, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, BookOpen, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -8,6 +8,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -17,13 +18,29 @@ const Signup = () => {
   };
   
   // A cleaner handleChange
-  const onNameChange = (e) => setFormData({...formData, name: e.target.value});
-  const onEmailChange = (e) => setFormData({...formData, email: e.target.value});
-  const onPassChange = (e) => setFormData({...formData, password: e.target.value});
+  const onNameChange = (e) => { setFormData({...formData, name: e.target.value}); if (errors.name) setErrors({...errors, name: null}); };
+  const onEmailChange = (e) => { setFormData({...formData, email: e.target.value}); if (errors.email) setErrors({...errors, email: null}); };
+  const onPassChange = (e) => { setFormData({...formData, password: e.target.value}); if (errors.password) setErrors({...errors, password: null}); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    // Modern Form Validation
+    const newErrors = {};
+    if (!formData.name) newErrors.name = "Full Name is required";
+    else if (formData.name.trim().length < 2) newErrors.name = "Name must be at least 2 characters";
+
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Please enter a valid email address";
+    
+    if (!formData.password) newErrors.password = "Password is required";
+    else if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters";
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
     
     try {
       const res = await fetch('http://localhost:5000/api/auth/register', {
@@ -85,85 +102,92 @@ const Signup = () => {
 
         {error && <div style={{ marginBottom: '1.5rem', padding: '0.75rem', background: '#fef2f2', color: '#ef4444', borderRadius: '8px', fontSize: '0.9rem', textAlign: 'center', fontWeight: 500 }}>{error}</div>}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#334155', marginBottom: '0.5rem' }}>Full Name</label>
             <div style={{ position: 'relative' }}>
-              <User size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <User size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: errors.name ? '#ef4444' : '#94a3b8' }} />
               <input 
                 type="text" 
                 placeholder="John Doe" 
                 value={formData.name}
                 onChange={onNameChange}
-                required
                 style={{ 
                   width: '100%', 
                   padding: '12px 16px 12px 48px', 
                   borderRadius: '12px', 
-                  border: '1px solid #e2e8f0', 
-                  background: 'white',
+                  border: `1px solid ${errors.name ? '#ef4444' : '#e2e8f0'}`, 
+                  background: errors.name ? '#fef2f2' : 'white',
                   fontSize: '0.95rem',
                   outline: 'none',
                   transition: 'all 0.2s',
                   color: '#1e293b'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#6366f1'}
-                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                onFocus={(e) => e.target.style.borderColor = errors.name ? '#ef4444' : '#6366f1'}
+                onBlur={(e) => e.target.style.borderColor = errors.name ? '#ef4444' : '#e2e8f0'}
               />
             </div>
+            {errors.name && (
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontSize: '0.85rem', marginTop: '6px', fontWeight: 500 }}>
+                <AlertCircle size={14} /> {errors.name}
+              </motion.div>
+            )}
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#334155', marginBottom: '0.5rem' }}>Email Address</label>
             <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Mail size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: errors.email ? '#ef4444' : '#94a3b8' }} />
               <input 
                 type="email" 
                 placeholder="name@company.com" 
                 value={formData.email}
                 onChange={onEmailChange}
-                required
                 style={{ 
                   width: '100%', 
                   padding: '12px 16px 12px 48px', 
                   borderRadius: '12px', 
-                  border: '1px solid #e2e8f0', 
-                  background: 'white',
+                  border: `1px solid ${errors.email ? '#ef4444' : '#e2e8f0'}`, 
+                  background: errors.email ? '#fef2f2' : 'white',
                   fontSize: '0.95rem',
                   outline: 'none',
                   transition: 'all 0.2s',
                   color: '#1e293b'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#6366f1'}
-                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                onFocus={(e) => e.target.style.borderColor = errors.email ? '#ef4444' : '#6366f1'}
+                onBlur={(e) => e.target.style.borderColor = errors.email ? '#ef4444' : '#e2e8f0'}
               />
             </div>
+            {errors.email && (
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontSize: '0.85rem', marginTop: '6px', fontWeight: 500 }}>
+                <AlertCircle size={14} /> {errors.email}
+              </motion.div>
+            )}
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#334155', marginBottom: '0.5rem' }}>Password</label>
             <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Lock size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: errors.password ? '#ef4444' : '#94a3b8' }} />
               <input 
                  type={showPassword ? "text" : "password"} 
-                placeholder="Create a strong password" 
+                placeholder="Password" 
                 value={formData.password}
                 onChange={onPassChange}
-                required
                 style={{ 
                   width: '100%', 
                   padding: '12px 48px 12px 48px', 
                   borderRadius: '12px', 
-                  border: '1px solid #e2e8f0', 
-                  background: 'white',
+                  border: `1px solid ${errors.password ? '#ef4444' : '#e2e8f0'}`, 
+                  background: errors.password ? '#fef2f2' : 'white',
                   fontSize: '0.95rem',
                   outline: 'none',
                   transition: 'all 0.2s',
                   color: '#1e293b'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#6366f1'}
-                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                onFocus={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : '#6366f1'}
+                onBlur={(e) => e.target.style.borderColor = errors.password ? '#ef4444' : '#e2e8f0'}
               />
                <button 
                   type="button"
@@ -173,6 +197,11 @@ const Signup = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {errors.password && (
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontSize: '0.85rem', marginTop: '6px', fontWeight: 500 }}>
+                <AlertCircle size={14} /> {errors.password}
+              </motion.div>
+            )}
           </div>
 
           <button 

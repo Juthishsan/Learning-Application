@@ -216,7 +216,7 @@ const AdminInstructors = () => {
                                     </div>
                                     <div>
                                         <label style={labelStyle}>Password</label>
-                                        <input type="password" placeholder="Create password" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} style={inputStyle} />
+                                        <input type="password" placeholder="Password" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} style={inputStyle} />
                                     </div>
                                 </div>
                                 <div>

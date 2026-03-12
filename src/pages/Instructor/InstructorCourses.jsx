@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
-import GradebookModal from '../../components/Instructor/GradebookModal';
-import { Plus, Trash2, Edit, Search, X as XIcon, FileText, Video, Image as ImageIcon, MoreVertical, Users, BookOpen, ClipboardList, CheckSquare, PlusCircle, Trash, GraduationCap } from 'lucide-react';
+import { Plus, Trash2, Edit, Search, X as XIcon, FileText, Video, Image as ImageIcon, MoreVertical, Users, BookOpen, ClipboardList, CheckSquare, PlusCircle, Trash, GraduationCap, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/Modals/ConfirmModal';
@@ -28,12 +28,15 @@ const InstructorCourses = () => {
 
     const [courses, setCourses] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user'));
 
     const [formData, setFormData] = useState({
         title: '', description: '', instructor: user?.name || '', price: '', category: '', thumbnail: ''
     });
     const [thumbnailFile, setThumbnailFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [errors, setErrors] = useState({});
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         title: '',
@@ -79,6 +82,22 @@ const InstructorCourses = () => {
 
     const handleCreate = async (e) => {
         e.preventDefault();
+        
+        // Validation
+        const newErrors = {};
+        if (!formData.title) newErrors.title = "Title is required";
+        if (!formData.price) newErrors.price = "Price is required";
+        else if (isNaN(formData.price) || Number(formData.price) < 0) newErrors.price = "Price must be a valid positive number";
+        if (!formData.category) newErrors.category = "Category is required";
+        if (!formData.description) newErrors.description = "Description is required";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        setErrors({});
+        setIsUploading(true);
         try {
             const formDataPayload = new FormData();
             formDataPayload.append('title', formData.title);
@@ -99,7 +118,6 @@ const InstructorCourses = () => {
                 throw new Error('Failed to create course');
             }
             setIsModalOpen(false);
-            setIsModalOpen(false);
             setFormData({ title: '', description: '', instructor: user.name, price: '', category: '', thumbnail: '' });
             setThumbnailFile(null);
             fetchCourses();
@@ -107,207 +125,13 @@ const InstructorCourses = () => {
         } catch (error) {
             console.error('Error creating course:', error);
             toast.error('Failed to create course');
-        }
-    };
-
-    const [contentModalOpen, setContentModalOpen] = useState(false);
-    const [selectedCourse, setSelectedCourse] = useState(null);
-    const [uploading, setUploading] = useState(false);
-    const [uploadFile, setUploadFile] = useState(null);
-    const [contentTitle, setContentTitle] = useState('');
-    const [contentType, setContentType] = useState('pdf');
-
-    const handleOpenContentModal = (course) => {
-        setSelectedCourse(course);
-        setContentModalOpen(true);
-    };
-
-    const handleUploadContent = async (e) => {
-        e.preventDefault();
-        if (!uploadFile || !selectedCourse) return;
-
-        const formDataPayload = new FormData();
-        formDataPayload.append('file', uploadFile);
-        formDataPayload.append('title', contentTitle);
-        formDataPayload.append('type', contentType);
-
-        setUploading(true);
-
-        try {
-            const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/content`, {
-                method: 'POST',
-                body: formDataPayload
-            });
-
-            if (res.ok) {
-                const updatedContent = await res.json();
-                const updatedCourse = { ...selectedCourse, content: updatedContent };
-                setCourses(courses.map(c => c._id === selectedCourse._id ? updatedCourse : c));
-                setSelectedCourse(updatedCourse);
-                toast.success('Content uploaded successfully');
-                setUploadFile(null);
-                setContentTitle('');
-            } else {
-                toast.error('Upload failed');
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error('Upload error');
         } finally {
-            setUploading(false);
+            setIsUploading(false);
         }
-    };
-
-    const handleDeleteContent = (contentId) => {
-        setConfirmModal({
-            isOpen: true,
-            title: 'Delete Content',
-            message: 'Remove this content permanently?',
-            onConfirm: async () => {
-                try {
-                    const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/content/${contentId}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (res.ok) {
-                        const updatedContent = await res.json();
-                        const updatedCourse = { ...selectedCourse, content: updatedContent };
-                        setCourses(courses.map(c => c._id === selectedCourse._id ? updatedCourse : c));
-                        setSelectedCourse(updatedCourse);
-                        toast.success('Content deleted');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    toast.error('Delete failed');
-                }
-            }
-        });
     };
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
     const [editingId, setEditingId] = useState(null);
-    const [gradebookModalOpen, setGradebookModalOpen] = useState(false);
-
-    const handleOpenGradebook = (course) => {
-        setSelectedCourse(course);
-        setGradebookModalOpen(true);
-    };
-
-    // Assessment State
-    const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
-    const [assessmentTab, setAssessmentTab] = useState('assignments'); // 'assignments' or 'quizzes'
-    const [assignmentForm, setAssignmentForm] = useState({ title: '', description: '', dueDate: '' });
-    const [quizForm, setQuizForm] = useState({ 
-        title: '', 
-        questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] 
-    });
-
-    const handleOpenAssessmentModal = (course) => {
-        setSelectedCourse(course);
-        setAssessmentModalOpen(true);
-        // Reset forms
-        setAssignmentForm({ title: '', description: '', dueDate: '' });
-        setQuizForm({ title: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] });
-    };
-
-    const handleCreateAssignment = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/assignments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(assignmentForm)
-            });
-            if (res.ok) {
-                const updatedAssignments = await res.json();
-                const updatedCourse = { ...selectedCourse, assignments: updatedAssignments };
-                setCourses(courses.map(c => c._id === selectedCourse._id ? updatedCourse : c));
-                setSelectedCourse(updatedCourse);
-                setAssignmentForm({ title: '', description: '', dueDate: '' });
-                toast.success('Assignment posted!');
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error('Failed to post assignment');
-        }
-    };
-
-    const handleDeleteAssignment = async (assignId) => {
-        try {
-            const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/assignments/${assignId}`, { method: 'DELETE' });
-            if (res.ok) {
-                const updatedAssignments = await res.json();
-                const updatedCourse = { ...selectedCourse, assignments: updatedAssignments };
-                setCourses(courses.map(c => c._id === selectedCourse._id ? updatedCourse : c));
-                setSelectedCourse(updatedCourse);
-                toast.success('Assignment deleted');
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleAddQuestion = () => {
-        setQuizForm({
-            ...quizForm,
-            questions: [...quizForm.questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]
-        });
-    };
-
-    const handleQuestionChange = (index, field, value) => {
-        const newQuestions = [...quizForm.questions];
-        newQuestions[index][field] = value;
-        setQuizForm({ ...quizForm, questions: newQuestions });
-    };
-
-    const handleOptionChange = (qIndex, oIndex, value) => {
-        const newQuestions = [...quizForm.questions];
-        newQuestions[qIndex].options[oIndex] = value;
-        setQuizForm({ ...quizForm, questions: newQuestions });
-    };
-
-    const handleRemoveQuestion = (index) => {
-        const newQuestions = quizForm.questions.filter((_, i) => i !== index);
-        setQuizForm({ ...quizForm, questions: newQuestions });
-    };
-
-    const handleCreateQuiz = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/quizzes`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(quizForm)
-            });
-            if (res.ok) {
-                const updatedQuizzes = await res.json();
-                const updatedCourse = { ...selectedCourse, quizzes: updatedQuizzes };
-                setCourses(courses.map(c => c._id === selectedCourse._id ? updatedCourse : c));
-                setSelectedCourse(updatedCourse);
-                setQuizForm({ title: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] });
-                toast.success('Quiz created!');
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error('Failed to create quiz');
-        }
-    };
-
-    const handleDeleteQuiz = async (quizId) => {
-        try {
-            const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/quizzes/${quizId}`, { method: 'DELETE' });
-            if (res.ok) {
-                const updatedQuizzes = await res.json();
-                const updatedCourse = { ...selectedCourse, quizzes: updatedQuizzes };
-                setCourses(courses.map(c => c._id === selectedCourse._id ? updatedCourse : c));
-                setSelectedCourse(updatedCourse);
-                toast.success('Quiz deleted');
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
 
     const handleEdit = (course) => {
         setEditingId(course._id);
@@ -326,6 +150,22 @@ const InstructorCourses = () => {
 
     const handleUpdate = async (e) => {
         e.preventDefault();
+
+        // Validation
+        const newErrors = {};
+        if (!formData.title) newErrors.title = "Title is required";
+        if (!formData.price) newErrors.price = "Price is required";
+        else if (isNaN(formData.price) || Number(formData.price) < 0) newErrors.price = "Price must be a valid positive number";
+        if (!formData.category) newErrors.category = "Category is required";
+        if (!formData.description) newErrors.description = "Description is required";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        setErrors({});
+        setIsUploading(true);
         try {
             const formDataPayload = new FormData();
             formDataPayload.append('title', formData.title);
@@ -353,6 +193,8 @@ const InstructorCourses = () => {
         } catch (error) {
             console.error('Error updating course:', error);
             toast.error('Failed to update course');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -441,6 +283,7 @@ const InstructorCourses = () => {
                                     transition={{ delay: index * 0.05 }}
                                     style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
                                     whileHover={{ backgroundColor: '#f8fafc' }}
+                                    onClick={() => navigate(`/instructor/courses/${course._id}`)}
                                 >
                                     <td style={{ padding: '1.25rem 1.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -472,32 +315,11 @@ const InstructorCourses = () => {
                                     <td style={{ padding: '1.25rem 1.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem' }}>
                                             <Users size={16} />
-                                            0
+                                            {course.students || 0}
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); handleOpenAssessmentModal(course); }} 
-                                                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #e0e7ff', background: 'white', color: '#6366f1', cursor: 'pointer', transition: 'all 0.2s' }} 
-                                                title="Assessments"
-                                            >
-                                                <ClipboardList size={16} />
-                                            </button>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); handleOpenContentModal(course); }} 
-                                                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #e0f2fe', background: 'white', color: '#0ea5e9', cursor: 'pointer', transition: 'all 0.2s' }} 
-                                                title="Manage Content"
-                                            >
-                                                <FileText size={16} />
-                                            </button>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); handleOpenGradebook(course); }} 
-                                                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #dcfce7', background: 'white', color: '#16a34a', cursor: 'pointer', transition: 'all 0.2s' }} 
-                                                title="Gradebook"
-                                            >
-                                                <GraduationCap size={16} />
-                                            </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); handleEdit(course); }} 
                                                 style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' }} 
@@ -541,64 +363,7 @@ const InstructorCourses = () => {
                 </div>
             </main>
 
-            {/* Reuse Modals Logic - Same as Admin but Styled */}
-             {contentModalOpen && selectedCourse && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="card" 
-                        style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '0', borderRadius: '16px', background: 'white', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
-                    >
-                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Course Content</h2>
-                                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>{selectedCourse.title}</p>
-                            </div>
-                            <button onClick={() => setContentModalOpen(false)} style={{ padding: '0.5rem', borderRadius: '50%', background: '#e2e8f0', color: '#64748b', border: 'none', cursor: 'pointer' }}><XIcon size={20} /></button>
-                        </div>
-
-                        <div style={{ padding: '2rem' }}>
-                            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem', border: '1px solid #e2e8f0' }}>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>Upload Material</h3>
-                                <form onSubmit={handleUploadContent} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <input placeholder="Content Title" value={contentTitle} onChange={e => setContentTitle(e.target.value)} required style={inputStyle} />
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <select value={contentType} onChange={e => setContentType(e.target.value)} style={{ ...inputStyle, flex: 1, background: 'white' }}>
-                                            <option value="pdf">PDF Document</option>
-                                            <option value="video">Video Lesson</option>
-                                            <option value="image">Image/Diagram</option>
-                                        </select>
-                                        <input type="file" onChange={e => setUploadFile(e.target.files[0])} required style={{ ...inputStyle, flex: 2, padding: '0.5rem', background: 'white' }} />
-                                    </div>
-                                    <button type="submit" disabled={uploading} style={{ marginTop: '0.5rem', background: '#1e293b', color: 'white', fontWeight: 600, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', border: 'none' }}>
-                                        {uploading ? 'Uploading...' : 'Upload Content'}
-                                    </button>
-                                </form>
-                            </div>
-
-                            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>Lesson List</h3>
-                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {selectedCourse.content?.map(item => (
-                                    <div key={item._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '12px', background: 'white' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                                                {getTypeIcon(item.type)}
-                                            </div>
-                                            <span style={{ fontWeight: 600, color: '#334155' }}>{item.title}</span>
-                                        </div>
-                                        <button onClick={() => handleDeleteContent(item._id)} style={{ color: '#ef4444', background: '#fee2e2', padding: '0.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-
-            {/* Create/Edit Modal UI (Simplified for brevity, similar to above content modal structure) */}
+            {/* Modals Logic - Only Create/Edit remain */}
              {(isModalOpen || isEditModalOpen) && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="card" style={{ width: '550px', maxHeight: '90vh', overflowY: 'auto', background: 'white', borderRadius: '16px', padding: '0' }}>
@@ -606,204 +371,46 @@ const InstructorCourses = () => {
                             <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>{isEditModalOpen ? 'Edit Course' : 'Create Course'}</h2>
                             <button onClick={() => { setIsModalOpen(false); setIsEditModalOpen(false); }} style={{ padding: '0.5rem', borderRadius: '50%', background: '#e2e8f0', border: 'none', cursor: 'pointer' }}><XIcon size={20} /></button>
                         </div>
-                         <form onSubmit={isEditModalOpen ? handleUpdate : handleCreate} style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                         <form onSubmit={isEditModalOpen ? handleUpdate : handleCreate} noValidate style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div>
                                 <label style={labelStyle}>Course Title</label>
-                                <input placeholder="e.g. Master ReactJS" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} style={inputStyle} />
+                                <input placeholder="e.g. Master ReactJS" value={formData.title} onChange={e => { setFormData({...formData, title: e.target.value}); if (errors.title) setErrors({...errors, title: null}); }} style={{ ...inputStyle, borderColor: errors.title ? '#ef4444' : '#e2e8f0', background: errors.title ? '#fef2f2' : 'white' }} disabled={isUploading} />
+                                {errors.title && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.title}</div>}
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div><label style={labelStyle}>Price (₹)</label><input type="number" required value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} style={inputStyle} /></div>
+                                <div>
+                                    <label style={labelStyle}>Price (₹)</label>
+                                    <input type="number" value={formData.price} onChange={e => { setFormData({...formData, price: e.target.value}); if (errors.price) setErrors({...errors, price: null}); }} style={{ ...inputStyle, borderColor: errors.price ? '#ef4444' : '#e2e8f0', background: errors.price ? '#fef2f2' : 'white' }} disabled={isUploading} />
+                                    {errors.price && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.price}</div>}
+                                </div>
                                 <div>
                                     <label style={labelStyle}>Category</label>
-                                    <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} style={{ ...inputStyle, background: 'white' }}>
+                                    <select value={formData.category} onChange={e => { setFormData({...formData, category: e.target.value}); if (errors.category) setErrors({...errors, category: null}); }} style={{ ...inputStyle, background: errors.category ? '#fef2f2' : 'white', borderColor: errors.category ? '#ef4444' : '#e2e8f0' }} disabled={isUploading}>
                                         <option value="" disabled>Select</option>
                                         {COURSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
+                                    {errors.category && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.category}</div>}
                                 </div>
                             </div>
                             <div>
                                 <label style={labelStyle}>Course Thumbnail</label>
-                                <input type="file" onChange={e => setThumbnailFile(e.target.files[0])} accept="image/*" style={{ ...inputStyle, padding: '0.5rem', background: 'white' }} />
+                                <input type="file" onChange={e => setThumbnailFile(e.target.files[0])} accept="image/*" style={{ ...inputStyle, padding: '0.5rem', background: 'white' }} disabled={isUploading} />
                                 {formData.thumbnail && !thumbnailFile && typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('http') && (
                                     <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Current thumbnail: <a href={formData.thumbnail} target="_blank" rel="noopener noreferrer">View</a></div>
                                 )}
                             </div>
-                            <div><label style={labelStyle}>Description</label><textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ ...inputStyle, minHeight: '100px' }} /></div>
-                            <button type="submit" style={{ padding: '1rem', background: '#4f46e5', color: 'white', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer' }}>{isEditModalOpen ? 'Save Changes' : 'Create Course'}</button>
+                            <div>
+                                <label style={labelStyle}>Description</label>
+                                <textarea value={formData.description} onChange={e => { setFormData({...formData, description: e.target.value}); if (errors.description) setErrors({...errors, description: null}); }} style={{ ...inputStyle, minHeight: '100px', borderColor: errors.description ? '#ef4444' : '#e2e8f0', background: errors.description ? '#fef2f2' : 'white' }} disabled={isUploading} />
+                                {errors.description && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.description}</div>}
+                            </div>
+                            <button type="submit" disabled={isUploading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: '#4f46e5', color: 'white', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', opacity: isUploading ? 0.7 : 1 }}>
+                                {isUploading ? <><Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> {isEditModalOpen ? 'Updating...' : 'Creating...'}</> : (isEditModalOpen ? 'Save Changes' : 'Create Course')}
+                            </button>
                         </form>
                     </motion.div>
                 </div>
             )}
-
-
-            {assessmentModalOpen && selectedCourse && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="card" 
-                        style={{ width: '800px', maxHeight: '90vh', overflowY: 'auto', padding: '0', borderRadius: '16px', background: 'white', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
-                    >
-                         <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Course Assessments</h2>
-                                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>{selectedCourse.title}</p>
-                            </div>
-                            <button onClick={() => setAssessmentModalOpen(false)} style={{ padding: '0.5rem', borderRadius: '50%', background: '#e2e8f0', color: '#64748b', border: 'none', cursor: 'pointer' }}><XIcon size={20} /></button>
-                        </div>
-
-                        <div style={{ padding: '0 1.5rem', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-                            <div style={{ display: 'flex', gap: '2rem' }}>
-                                <button 
-                                    onClick={() => setAssessmentTab('assignments')}
-                                    style={{ padding: '1rem 0', background: 'none', border: 'none', borderBottom: assessmentTab === 'assignments' ? '2px solid #6366f1' : '2px solid transparent', color: assessmentTab === 'assignments' ? '#6366f1' : '#64748b', fontWeight: 600, cursor: 'pointer' }}
-                                >
-                                    Assignments
-                                </button>
-                                <button 
-                                    onClick={() => setAssessmentTab('quizzes')}
-                                    style={{ padding: '1rem 0', background: 'none', border: 'none', borderBottom: assessmentTab === 'quizzes' ? '2px solid #6366f1' : '2px solid transparent', color: assessmentTab === 'quizzes' ? '#6366f1' : '#64748b', fontWeight: 600, cursor: 'pointer' }}
-                                >
-                                    Quizzes
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style={{ padding: '2rem' }}>
-                            {assessmentTab === 'assignments' ? (
-                                <div style={{ display: 'flex', gap: '2rem' }}>
-                                    {/* Existing Assignments List */}
-                                    <div style={{ flex: 1, borderRight: '1px solid #e2e8f0', paddingRight: '2rem' }}>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>Posted Assignments</h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                            {selectedCourse.assignments && selectedCourse.assignments.length > 0 ? selectedCourse.assignments.map(assign => (
-                                                <div key={assign._id} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                                                        <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1e293b' }}>{assign.title}</h4>
-                                                        <button onClick={() => handleDeleteAssignment(assign._id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>
-                                                    </div>
-                                                    <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>{assign.description}</p>
-                                                    {assign.dueDate && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>Due: {new Date(assign.dueDate).toLocaleDateString()}</div>}
-                                                </div>
-                                            )) : (
-                                                <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>No active assignments.</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Create New Assignment Form */}
-                                    <div style={{ width: '300px' }}>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>New Assignment</h3>
-                                        <form onSubmit={handleCreateAssignment} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                            <div>
-                                                <label style={labelStyle}>Title</label>
-                                                <input required value={assignmentForm.title} onChange={e => setAssignmentForm({...assignmentForm, title: e.target.value})} style={inputStyle} placeholder="Assignment Title" />
-                                            </div>
-                                            <div>
-                                                <label style={labelStyle}>Description</label>
-                                                <textarea required value={assignmentForm.description} onChange={e => setAssignmentForm({...assignmentForm, description: e.target.value})} style={{ ...inputStyle, minHeight: '100px' }} placeholder="Instructions..." />
-                                            </div>
-                                            <div>
-                                                <label style={labelStyle}>Due Date</label>
-                                                <input type="date" value={assignmentForm.dueDate} onChange={e => setAssignmentForm({...assignmentForm, dueDate: e.target.value})} style={inputStyle} />
-                                            </div>
-                                            <button type="submit" style={{ padding: '0.75rem', background: '#4f46e5', color: 'white', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer', marginTop: '0.5rem' }}>Post Assignment</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    {/* Quiz Creation UI */}
-                                    <div style={{ marginBottom: '2rem' }}>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>Create Assessment Quiz</h3>
-                                        <form onSubmit={handleCreateQuiz} style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                            <div style={{ marginBottom: '1.5rem' }}>
-                                                <label style={labelStyle}>Quiz Title</label>
-                                                <input required value={quizForm.title} onChange={e => setQuizForm({...quizForm, title: e.target.value})} style={{ ...inputStyle, background: 'white' }} placeholder="e.g. Mid-Term Assessment" />
-                                            </div>
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                                {quizForm.questions.map((q, qIndex) => (
-                                                    <div key={qIndex} style={{ padding: '1.25rem', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', position: 'relative' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                                            <span style={{ fontWeight: 600, color: '#6366f1' }}>Question {qIndex + 1}</span>
-                                                            {quizForm.questions.length > 1 && (
-                                                                <button type="button" onClick={() => handleRemoveQuestion(qIndex)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash size={16} /></button>
-                                                            )}
-                                                        </div>
-                                                        <input 
-                                                            required 
-                                                            value={q.question} 
-                                                            onChange={e => handleQuestionChange(qIndex, 'question', e.target.value)} 
-                                                            style={{ ...inputStyle, marginBottom: '1rem' }} 
-                                                            placeholder="Enter your question here..." 
-                                                        />
-                                                        
-                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                                            {q.options.map((opt, oIndex) => (
-                                                                <div key={oIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                    <input 
-                                                                        type="radio" 
-                                                                        name={`correct-${qIndex}`} 
-                                                                        checked={q.correctAnswer == oIndex} 
-                                                                        onChange={() => handleQuestionChange(qIndex, 'correctAnswer', oIndex)}
-                                                                        style={{ width: '16px', height: '16px', accentColor: '#10b981' }}
-                                                                    />
-                                                                    <input 
-                                                                        required 
-                                                                        value={opt} 
-                                                                        onChange={e => handleOptionChange(qIndex, oIndex, e.target.value)} 
-                                                                        placeholder={`Option ${oIndex + 1}`} 
-                                                                        style={{ ...inputStyle, padding: '0.5rem', fontSize: '0.9rem' }} 
-                                                                    />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between' }}>
-                                                <button type="button" onClick={handleAddQuestion} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6366f1', background: '#e0e7ff', padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                                                    <PlusCircle size={18} /> Add Question
-                                                </button>
-                                                <button type="submit" style={{ background: '#4f46e5', color: 'white', padding: '0.75rem 2rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                                                    Publish Quiz
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-
-                                    {/* Existing Quizzes List */}
-                                    <div>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>Published Quizzes</h3>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-                                            {selectedCourse.quizzes && selectedCourse.quizzes.length > 0 ? selectedCourse.quizzes.map(quiz => (
-                                                <div key={quiz._id} style={{ padding: '1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div>
-                                                        <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1e293b' }}>{quiz.title}</h4>
-                                                        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>{quiz.questions?.length || 0} Questions</p>
-                                                    </div>
-                                                    <button onClick={() => handleDeleteQuiz(quiz._id)} style={{ color: '#ef4444', background: '#fee2e2', padding: '0.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>
-                                                </div>
-                                            )) : (
-                                                <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>No quizzes published yet.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-
-            <GradebookModal 
-                isOpen={gradebookModalOpen} 
-                onClose={() => setGradebookModalOpen(false)} 
-                courseId={selectedCourse?._id}
-                courseTitle={selectedCourse?.title}
-            />
 
             <ConfirmModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} onConfirm={confirmModal.onConfirm} title={confirmModal.title} message={confirmModal.message} />
         </div>

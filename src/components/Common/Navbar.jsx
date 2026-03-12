@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Search, User, Menu, X, LogOut, Settings, Bell, ChevronDown, ChevronRight, Home, Info, Phone, LayoutDashboard } from 'lucide-react';
+import { BookOpen, Search, User, Menu, X, LogOut, Settings, Bell, ChevronDown, ChevronRight, Home, Info, Phone, LayoutDashboard, ShoppingCart } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -272,6 +272,9 @@ const Navbar = () => {
         <div className="hidden-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
           {user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <Link to="/cart" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', position: 'relative' }}>
+                    <ShoppingCart size={20} />
+                  </Link>
                   <button style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', position: 'relative' }}>
                     <Bell size={20} />
                     <span style={{ position: 'absolute', top: '8px', right: '8px', width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', border: '2px solid white' }}></span>
@@ -424,6 +427,10 @@ const Navbar = () => {
                            <Link to="/profile" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', fontWeight: 600, color: '#1e293b', textDecoration: 'none' }}>
                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5' }}><User size={18} /></div>
                                Profile
+                           </Link>
+                           <Link to="/cart" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', fontWeight: 600, color: '#1e293b', textDecoration: 'none' }}>
+                               <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#ffedd5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c' }}><ShoppingCart size={18} /></div>
+                               Cart
                            </Link>
                            <Link to="/dashboard" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', fontWeight: 600, color: '#1e293b', textDecoration: 'none' }}>
                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5' }}><BookOpen size={18} /></div>

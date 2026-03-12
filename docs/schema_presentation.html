@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Schema Presentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            
+            --user-color: #3b82f6; /* Blue for User */
+            --course-color: #10b981; /* Green for Course */
+            --support-color: #8b5cf6; /* Purple for Support */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+        
+        p.subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .schema-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .schema-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .schema-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header.user-theme { background-color: var(--user-color); }
+        .card-header.course-theme { background-color: var(--course-color); }
+        .card-header.support-theme { background-color: var(--support-color); }
+
+        .schema-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .schema-table th, .schema-table td {
+            padding: 12px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .schema-table th {
+            background-color: #f1f5f9;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .schema-table td {
+            font-size: 0.95rem;
+        }
+
+        .field-name {
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .field-type {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .field-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .section-title {
+            width: 100%;
+            max-width: 1400px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Project Database Schema</h1>
+    <p class="subtitle">Generated for PowerPoint Presentation</p>
+
+    <!-- User Management Section -->
+    <div class="section-title">User Management System</div>
+    <div class="schema-container">
+        
+        <!-- User Table -->
+        <div class="schema-card">
+            <div class="card-header user-theme">
+                <span>User</span>
+                <span style="opacity: 0.8; font-size: 0.9em;">Collection</span>
+            </div>
+            <table class="schema-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Type</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="field-name">_id</td>
+                        <td><span class="field-type">ObjectId</span></td>
+                        <td class="field-desc">Primary Key</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">name</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Required</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">email</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Unique, Required</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">password</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Hashed</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">role</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">'student' | 'instructor' | 'admin'</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">enrolledCourses</td>
+                        <td><span class="field-type">Array</span></td>
+                        <td class="field-desc">List of enrolled interactions</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">preferences</td>
+                        <td><span class="field-type">Object</span></td>
+                        <td class="field-desc">User preferences & skills</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Instructor Table -->
+        <div class="schema-card">
+            <div class="card-header user-theme">
+                <span>Instructor</span>
+                <span style="opacity: 0.8; font-size: 0.9em;">Collection</span>
+            </div>
+            <table class="schema-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Type</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="field-name">_id</td>
+                        <td><span class="field-type">ObjectId</span></td>
+                        <td class="field-desc">Primary Key</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">name</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Required</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">email</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Unique</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">designation</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Job Title</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">expertise</td>
+                        <td><span class="field-type">Array&lt;String&gt;</span></td>
+                        <td class="field-desc">Skills list</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">bio</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Biography</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Admin Table -->
+        <div class="schema-card">
+            <div class="card-header user-theme">
+                <span>Admin</span>
+                <span style="opacity: 0.8; font-size: 0.9em;">Collection</span>
+            </div>
+            <table class="schema-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Type</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="field-name">_id</td>
+                        <td><span class="field-type">ObjectId</span></td>
+                        <td class="field-desc">Primary Key</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">name</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Required</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">email</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Unique</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">role</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Default: 'admin'</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Course Management Section -->
+    <div class="section-title">Course Management System</div>
+    <div class="schema-container">
+
+        <!-- Course Table -->
+        <div class="schema-card" style="grid-column: span 2;">
+            <div class="card-header course-theme">
+                <span>Course</span>
+                <span style="opacity: 0.8; font-size: 0.9em;">Collection</span>
+            </div>
+            <table class="schema-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Type</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="field-name">title</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Course Title</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">instructorId</td>
+                        <td><span class="field-type">ObjectId</span></td>
+                        <td class="field-desc">Ref: User</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">rating</td>
+                        <td><span class="field-type">Number</span></td>
+                        <td class="field-desc">Average Rating</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">lessons</td>
+                        <td><span class="field-type">Array</span></td>
+                        <td class="field-desc">Embedded Lesson Objects</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">content</td>
+                        <td><span class="field-type">Array</span></td>
+                        <td class="field-desc">Video/PDF content items</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">assignments</td>
+                        <td><span class="field-type">Array</span></td>
+                        <td class="field-desc">Embedded Assignment Objects</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">quizzes</td>
+                        <td><span class="field-type">Array</span></td>
+                        <td class="field-desc">Embedded Quiz Objects</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Support System Section -->
+    <div class="section-title">Support & Logging System</div>
+    <div class="schema-container">
+
+        <!-- ActivityLog Table -->
+        <div class="schema-card">
+            <div class="card-header support-theme">
+                <span>ActivityLog</span>
+                <span style="opacity: 0.8; font-size: 0.9em;">Collection</span>
+            </div>
+            <table class="schema-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Type</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="field-name">action</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Action type</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">description</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Activity details</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">entityId</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Associated Entity ID</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">createdAt</td>
+                        <td><span class="field-type">Date</span></td>
+                        <td class="field-desc">Default: Date.now</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Contact Table -->
+        <div class="schema-card">
+            <div class="card-header support-theme">
+                <span>Contact</span>
+                <span style="opacity: 0.8; font-size: 0.9em;">Collection</span>
+            </div>
+            <table class="schema-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Type</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="field-name">name</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Sender Name</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">email</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Sender Email</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">subject</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Message Subject</td>
+                    </tr>
+                    <tr>
+                        <td class="field-name">message</td>
+                        <td><span class="field-type">String</span></td>
+                        <td class="field-desc">Message Body</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</body>
+</html>

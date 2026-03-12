@@ -5,11 +5,19 @@ const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const { courseUpload, cloudinary } = require('../config/cloudinary');
 
-// Get all courses
+// Get all courses with student count
 router.get('/', async (req, res) => {
   try {
-    const courses = await Course.find();
-    res.json(courses);
+    const courses = await Course.find().lean();
+    
+    const coursesWithCount = await Promise.all(courses.map(async (course) => {
+        const studentCount = await User.countDocuments({
+            'enrolledCourses.courseId': course._id
+        });
+        return { ...course, students: studentCount };
+    }));
+
+    res.json(coursesWithCount);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -44,12 +52,17 @@ router.post('/', courseUpload.single('thumbnail'), async (req, res) => {
   }
 });
 
-// Get single course
+// Get single course with student count
 router.get('/:id', async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
+        const course = await Course.findById(req.params.id).lean();
         if(!course) return res.status(404).json({ msg: 'Course not found'});
-        res.json(course);
+
+        const studentCount = await User.countDocuments({
+            'enrolledCourses.courseId': req.params.id
+        });
+
+        res.json({ ...course, students: studentCount });
     } catch (err) {
         console.error(err.message);
         if(err.kind === 'ObjectId') return res.status(404).json({ msg: 'Course not found'});
@@ -67,7 +80,7 @@ router.put('/:id', courseUpload.single('thumbnail'), async (req, res) => {
             updateData.thumbnail = req.file.path;
         }
 
-        const course = await Course.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        const course = await Course.findByIdAndUpdate(req.params.id, updateData, { new: true }).lean();
         
         const log = new ActivityLog({
             action: 'COURSE_UPDATED',
@@ -77,7 +90,12 @@ router.put('/:id', courseUpload.single('thumbnail'), async (req, res) => {
         });
         await log.save();
 
-        res.json(course);
+        // Get student count for updated course response
+        const studentCount = await User.countDocuments({
+            'enrolledCourses.courseId': course._id
+        });
+
+        res.json({ ...course, students: studentCount });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -126,7 +144,7 @@ router.delete('/:id', async (req, res) => {
 // @access  Admin
 router.post('/:id/content', courseUpload.single('file'), async (req, res) => {
     try {
-        const { title, type } = req.body;
+            const { title, type, description } = req.body;
         const course = await Course.findById(req.params.id);
         
         if (!course) {
@@ -136,6 +154,7 @@ router.post('/:id/content', courseUpload.single('file'), async (req, res) => {
         if (req.file && req.file.path) {
             const newContent = {
                 title: title || req.file.originalname,
+                description: description || '',
                 type: type || 'pdf', // default fallback
                 url: req.file.path,
                 public_id: req.file.filename,
@@ -159,6 +178,55 @@ router.post('/:id/content', courseUpload.single('file'), async (req, res) => {
         }
     } catch (err) {
         console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   PUT api/courses/:id/content/:contentId
+// @desc    Update course content
+router.put('/:id/content/:contentId', courseUpload.single('file'), async (req, res) => {
+    try {
+        const { title, description, type } = req.body;
+        const course = await Course.findById(req.params.id);
+
+        if (!course) {
+            return res.status(404).json({ msg: 'Course not found' });
+        }
+
+        const contentItem = course.content.id(req.params.contentId);
+        if (!contentItem) {
+            return res.status(404).json({ msg: 'Content not found' });
+        }
+
+        // Update basic fields
+        if (title) contentItem.title = title;
+        if (description) contentItem.description = description;
+        if (type) contentItem.type = type;
+
+        // Handle file replacement
+        if (req.file && req.file.path) {
+            // Delete old file from Cloudinary
+            if (contentItem.public_id) {
+                try {
+                     const resourceType = contentItem.type === 'video' ? 'video' : 'image';
+                     await cloudinary.uploader.destroy(contentItem.public_id, { resource_type: resourceType });
+                } catch (cloudErr) {
+                    console.error("Cloudinary Deletion Error:", cloudErr);
+                }
+            }
+
+            // Update with new file info
+            contentItem.url = req.file.path;
+            contentItem.public_id = req.file.filename;
+            contentItem.fileName = req.file.originalname;
+            contentItem.type = type || contentItem.type; // Update type if provided, else keep or infer? Better to likely update if file changed.
+        }
+
+        await course.save();
+        res.json(course.content);
+
+    } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
@@ -198,6 +266,29 @@ router.delete('/:id/assignments/:assignId', async (req, res) => {
     }
 });
 
+// @route   PUT api/courses/:id/assignments/:assignId
+// @desc    Update an assignment
+router.put('/:id/assignments/:assignId', async (req, res) => {
+    try {
+        const { title, description, dueDate } = req.body;
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ msg: 'Course not found' });
+
+        const assignment = course.assignments.id(req.params.assignId);
+        if(!assignment) return res.status(404).json({ msg: 'Assignment not found' });
+
+        if(title) assignment.title = title;
+        if(description) assignment.description = description;
+        if(dueDate) assignment.dueDate = dueDate;
+
+        await course.save();
+        res.json(course.assignments);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   POST api/courses/:id/quizzes
 // @desc    Add a quiz
 router.post('/:id/quizzes', async (req, res) => {
@@ -227,6 +318,28 @@ router.delete('/:id/quizzes/:quizId', async (req, res) => {
         course.quizzes = course.quizzes.filter(q => q._id.toString() !== req.params.quizId);
         await course.save();
 
+        res.json(course.quizzes);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   PUT api/courses/:id/quizzes/:quizId
+// @desc    Update a quiz
+router.put('/:id/quizzes/:quizId', async (req, res) => {
+    try {
+        const { title, questions } = req.body;
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ msg: 'Course not found' });
+
+        const quiz = course.quizzes.id(req.params.quizId);
+        if(!quiz) return res.status(404).json({ msg: 'Quiz not found' });
+
+        if(title) quiz.title = title;
+        if(questions) quiz.questions = questions;
+
+        await course.save();
         res.json(course.quizzes);
     } catch (err) {
         console.error(err.message);

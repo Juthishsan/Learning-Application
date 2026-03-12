@@ -3,6 +3,8 @@ import { BookOpen, Clock, Award, BarChart2, Settings, LogOut, Play, Compass, Fil
 import { useNavigate } from 'react-router-dom';
 import PersonalizationModal from '../../components/Modals/PersonalizationModal';
 import ConfirmModal from '../../components/Modals/ConfirmModal';
+import toast from 'react-hot-toast';
+
 import { motion } from 'framer-motion';
 
 const Dashboard = () => {
@@ -12,7 +14,10 @@ const Dashboard = () => {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [isPersonalizeOpen, setIsPersonalizeOpen] = useState(false);
   const [assignmentFilter, setAssignmentFilter] = useState('all');
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [assignmentTab, setAssignmentTab] = useState('assignments');
+  const [showUnenrollConfirm, setShowUnenrollConfirm] = useState(false);
+  const [courseToUnenroll, setCourseToUnenroll] = useState(null);
+
 
   useEffect(() => {
      const storedUser = localStorage.getItem('user');
@@ -35,6 +40,36 @@ const Dashboard = () => {
       } catch (err) {
           console.error("Failed to fetch courses");
       }
+  };
+
+  const handleUnenrollClick = (course) => {
+      setCourseToUnenroll(course);
+      setShowUnenrollConfirm(true);
+  };
+
+  const performUnenroll = async () => {
+    if (!courseToUnenroll || !user) return;
+
+    try {
+        const userId = user.id || user._id;
+        const res = await fetch(`http://localhost:5000/api/users/${userId}/courses/${courseToUnenroll._id}`, {
+            method: 'DELETE',
+        });
+
+        if (res.ok) {
+            toast.success(`Unenrolled from ${courseToUnenroll.title}`);
+            // Optimistically update
+            setEnrolledCourses(prev => prev.filter(e => e.courseId._id !== courseToUnenroll._id));
+            setShowUnenrollConfirm(false);
+            setCourseToUnenroll(null);
+        } else {
+            const data = await res.json();
+            toast.error(data.msg || 'Unenrollment failed');
+        }
+    } catch (err) {
+        console.error(err);
+        toast.error('Unenrollment failed');
+    }
   };
 
   // Calculate Stats
@@ -131,9 +166,9 @@ const Dashboard = () => {
       }
   });
 
-  // Calculate upcoming deadlines
+  // Calculate upcoming deadlines (including overdue)
   const upcomingDeadlines = allTasks
-    .filter(task => task.dueDate && new Date(task.dueDate) > new Date() && task.status === 'Pending')
+    .filter(task => task.dueDate && task.status === 'Pending')
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
     .slice(0, 3);
 
@@ -254,23 +289,27 @@ const Dashboard = () => {
                      </div>
                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                          {upcomingDeadlines.length > 0 ? (
-                             upcomingDeadlines.map((task, idx) => {
-                                 const date = new Date(task.dueDate);
-                                 const month = date.toLocaleString('default', { month: 'short' });
-                                 const day = date.getDate();
-                                 return (
-                                     <div key={idx} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f1f5f9', padding: '0.5rem', borderRadius: '10px', minWidth: '50px' }}>
-                                             <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase' }}>{month}</span>
-                                             <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b' }}>{day}</span>
-                                         </div>
-                                         <div style={{ flex: 1 }}>
-                                             <h5 style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem', marginBottom: '0.1rem', lineHeight: 1.2 }}>{task.title}</h5>
-                                             <p style={{ fontSize: '0.75rem', color: '#64748b' }}>{task.courseTitle}</p>
-                                         </div>
-                                     </div>
-                                 );
-                             })
+                            upcomingDeadlines.map((task, idx) => {
+                                const date = new Date(task.dueDate);
+                                const isOverdue = date < new Date();
+                                const month = date.toLocaleString('default', { month: 'short' });
+                                const day = date.getDate();
+                                return (
+                                    <div key={idx} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: isOverdue ? '#fee2e2' : '#f1f5f9', padding: '0.5rem', borderRadius: '10px', minWidth: '50px' }}>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isOverdue ? '#b91c1c' : '#ef4444', textTransform: 'uppercase' }}>{month}</span>
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: isOverdue ? '#b91c1c' : '#1e293b' }}>{day}</span>
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <h5 style={{ fontWeight: 700, color: '#334155', fontSize: '0.9rem', marginBottom: '0.1rem', lineHeight: 1.2 }}>
+                                                {task.title}
+                                                {isOverdue && <span style={{ fontSize: '0.65rem', marginLeft: '0.5rem', background: '#fee2e2', color: '#b91c1c', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>OVERDUE</span>}
+                                            </h5>
+                                            <p style={{ fontSize: '0.75rem', color: '#64748b' }}>{task.courseTitle}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })
                          ) : (
                              <div style={{ textAlign: 'center', padding: '1rem 0', color: '#94a3b8', fontSize: '0.9rem' }}>
                                  <CheckCircle size={24} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
@@ -282,20 +321,33 @@ const Dashboard = () => {
 
                  {/* Calendar / Date Widget */}
                  <div className="card" style={{ background: 'white', padding: '1.5rem', borderRadius: '20px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
-                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#1e293b' }}>February 2026</h3>
+                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: '#1e293b' }}>
+                        {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}
+                     </h3>
                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>
                          {['S','M','T','W','T','F','S'].map((d,i) => <div key={i}>{d}</div>)}
-                         {Array.from({length: 28}, (_, i) => i + 1).map(d => (
-                             <div key={d} style={{ 
-                                 padding: '0.5rem 0', 
-                                 borderRadius: '8px', 
-                                 background: d === 12 ? '#4f46e5' : 'transparent', 
-                                 color: d === 12 ? 'white' : '#1e293b',
-                                 cursor: 'pointer'
-                            }}>
-                                {d}
-                             </div>
+                         
+                         {/* Empty slots for start of month */}
+                         {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, i) => (
+                             <div key={`empty-${i}`}></div>
                          ))}
+
+                         {/* Days */}
+                         {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() }, (_, i) => i + 1).map(d => {
+                             const isToday = d === new Date().getDate();
+                             return (
+                                 <div key={d} style={{ 
+                                     padding: '0.5rem 0', 
+                                     borderRadius: '8px', 
+                                     background: isToday ? '#4f46e5' : 'transparent', 
+                                     color: isToday ? 'white' : '#1e293b',
+                                     cursor: 'pointer',
+                                     fontWeight: isToday ? 700 : 500
+                                }}>
+                                    {d}
+                                 </div>
+                             );
+                         })}
                      </div>
                  </div>
              </div>
@@ -342,13 +394,23 @@ const Dashboard = () => {
                                   <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', marginBottom: '1.5rem' }}>
                                     <div style={{ width: `${enrollment.progress || 0}%`, height: '100%', background: enrollment.progress === 100 ? '#10b981' : '#4f46e5', borderRadius: '4px' }}></div>
                                   </div>
-                                  <button 
-                                    className="btn btn-primary" 
-                                    style={{ width: '100%', padding: '0.9rem', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                                  >
-                                    {enrollment.progress > 0 ? 'Continue Learning' : 'Start Course'} <ArrowRight size={18} />
-                                  </button>
-                                </div>
+                                    <button 
+                                      className="btn btn-primary" 
+                                      style={{ width: '100%', padding: '0.9rem', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}
+                                    >
+                                      {enrollment.progress > 0 ? 'Continue Learning' : 'Start Course'} <ArrowRight size={18} />
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleUnenrollClick(enrollment.courseId);
+                                        }}
+                                        style={{ width: '100%', padding: '0.5rem', background: 'transparent', border: 'none', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', opacity: 0.8 }}
+                                    >
+                                        <LogOut size={14} /> Unenroll
+                                    </button>
+                                  </div>
                              </div>
                         </motion.div>
                     ))}
@@ -366,8 +428,13 @@ const Dashboard = () => {
         );
 
       case 'assignments':
-        // Filter tasks based on `assignmentFilter`
+        // Filter tasks based on assignmentTab (Assignments vs Quizzes) AND assignmentFilter
         const filteredTasks = allTasks.filter(task => {
+            // Filter by type
+            if (assignmentTab === 'assignments' && task.type !== 'assignment') return false;
+            if (assignmentTab === 'quizzes' && task.type !== 'quiz') return false;
+
+            // Filter by status (all/pending/completed)
             if (assignmentFilter === 'all') return true;
             const isCompleted = task.status === 'Submitted' || task.status === 'Passed' || task.status === 'Failed' || (task.score !== undefined);
             if (assignmentFilter === 'pending') return !isCompleted;
@@ -378,7 +445,44 @@ const Dashboard = () => {
         return (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>Assignments & Quizzes</h2>
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'white', padding: '4px', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                    <button
+                        onClick={() => setAssignmentTab('assignments')}
+                        style={{
+                            padding: '0.6rem 1.25rem',
+                            borderRadius: '10px',
+                            background: assignmentTab === 'assignments' ? '#4f46e5' : 'transparent',
+                            color: assignmentTab === 'assignments' ? 'white' : '#64748b',
+                            border: 'none',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            transition: 'all 0.2s',
+                            boxShadow: assignmentTab === 'assignments' ? '0 4px 6px -1px rgba(79, 70, 229, 0.2)' : 'none'
+                        }}
+                    >
+                        <FileText size={18} />
+                        Assignments
+                    </button>
+                    <button
+                        onClick={() => setAssignmentTab('quizzes')}
+                        style={{
+                            padding: '0.6rem 1.25rem',
+                            borderRadius: '10px',
+                            background: assignmentTab === 'quizzes' ? '#4f46e5' : 'transparent',
+                            color: assignmentTab === 'quizzes' ? 'white' : '#64748b',
+                            border: 'none',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            transition: 'all 0.2s',
+                            boxShadow: assignmentTab === 'quizzes' ? '0 4px 6px -1px rgba(79, 70, 229, 0.2)' : 'none'
+                        }}
+                    >
+                        <HelpCircle size={18} />
+                        Quizzes
+                    </button>
+                </div>
                 
                 <div style={{ background: 'white', padding: '4px', borderRadius: '12px', display: 'flex', gap: '4px', border: '1px solid #e2e8f0' }}>
                     {['all', 'pending', 'completed'].map(filter => (
@@ -388,8 +492,8 @@ const Dashboard = () => {
                             style={{
                                 padding: '0.5rem 1rem',
                                 borderRadius: '8px',
-                                background: assignmentFilter === filter ? '#4f46e5' : 'transparent',
-                                color: assignmentFilter === filter ? 'white' : '#64748b',
+                                background: assignmentFilter === filter ? '#e0e7ff' : 'transparent',
+                                color: assignmentFilter === filter ? '#4f46e5' : '#64748b',
                                 border: 'none',
                                 fontSize: '0.85rem',
                                 fontWeight: 700,
@@ -482,9 +586,9 @@ const Dashboard = () => {
              ) : (
                 <div style={{ textAlign: 'center', padding: '6rem 2rem', background: 'white', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
                     <div style={{ background: '#f8fafc', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-                        <FileText size={40} color="#94a3b8" />
+                        {assignmentTab === 'assignments' ? <FileText size={40} color="#94a3b8" /> : <HelpCircle size={40} color="#94a3b8" />}
                     </div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.5rem' }}>No tasks found</h3>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.5rem' }}>No {assignmentTab} found</h3>
                     <p style={{ color: '#64748b' }}>Try changing the filter or enroll in a new course.</p>
                 </div>
              )}
@@ -611,38 +715,8 @@ const Dashboard = () => {
         
         <div style={{ marginTop: 'auto', paddingTop: '2rem' }}>
              
-             {/* Mini User Profile in Sidebar Bottom */}
-             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5', fontWeight: 700 }}>
-                    {user.name.charAt(0)}
-                </div>
-                <div style={{ overflow: 'hidden' }}>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</h4>
-                    <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Student Plan</p>
-                </div>
-             </div>
+             {/* Mini User Profile Removed */}
 
-             <button 
-                onClick={() => setShowLogoutConfirm(true)}
-                style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '1rem',
-                    width: '100%', 
-                    padding: '0.9rem 1.25rem', 
-                    borderRadius: '12px', 
-                    textAlign: 'left', 
-                    background: '#fef2f2',
-                    color: '#ef4444',
-                    fontWeight: 600,
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                    border: 'none'
-                }}
-             >
-                 <LogOut size={20} />
-                 Sign Out
-             </button>
         </div>
       </aside>
 
@@ -681,22 +755,21 @@ const Dashboard = () => {
                 onUpdate={(updatedUser) => setUser(updatedUser)}
             />
         )}
+
+        <ConfirmModal
+            isOpen={showUnenrollConfirm}
+            onClose={() => setShowUnenrollConfirm(false)}
+            onConfirm={performUnenroll}
+            title="Unenroll Course?"
+            message={`Are you sure you want to unenroll from "${courseToUnenroll?.title}"? You will lose your progress.`}
+            confirmText="Yes, Unenroll"
+            cancelText="Cancel"
+            isDestructive={true}
+            icon={LogOut}
+        />
       </main>
 
-      <ConfirmModal
-        isOpen={showLogoutConfirm}
-        onClose={() => setShowLogoutConfirm(false)}
-        onConfirm={() => {
-            localStorage.removeItem('user');
-            navigate('/login');
-        }}
-        title="Sign Out?"
-        message="Are you sure you want to sign out? You will need to log in again to access your courses."
-        confirmText="Sign Out"
-        cancelText="Cancel"
-        isDestructive={true}
-        icon={LogOut}
-      />
+
 
       <style jsx>{`
         @media (max-width: 900px) {

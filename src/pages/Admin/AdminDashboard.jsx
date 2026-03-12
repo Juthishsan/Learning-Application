@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/Admin/AdminSidebar';
 import { Users, BookOpen, Activity, TrendingUp, Calendar, ArrowUpRight, Shield } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({ 
@@ -139,17 +139,17 @@ const AdminDashboard = () => {
                         </div>
                         <div style={{ width: '100%', height: '350px' }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={stats.userGrowth} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
+                                <BarChart data={stats.userGrowth} margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
                                     <CartesianGrid vertical={false} stroke="#f1f5f9" strokeDasharray="3 3" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: '12px'}} dy={15} />
                                     <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: '12px'}} />
                                     <Tooltip 
                                         contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '12px', color: 'white', padding: '12px' }}
                                         itemStyle={{ color: '#818cf8', fontWeight: 600 }}
-                                        cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                        cursor={{ fill: '#f1f5f9' }}
                                     />
-                                    <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={4} dot={{ r: 6, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8, strokeWidth: 0 }} />
-                                </LineChart>
+                                    <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={40} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -216,25 +216,38 @@ const AdminDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Recent Students (Width: 5/12) */}
+                    {/* Recent Registrations (Width: 5/12) */}
                     <div style={{ gridColumn: 'span 5', background: 'white', padding: '2rem', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>New Students</h3>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Recent Registrations</h3>
                             <button style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 600, cursor: 'pointer' }}>View All</button>
                         </div>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {recentUsers.length > 0 ? recentUsers.map(user => (
-                                <div key={user._id} style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #f1f5f9' }}>
-                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#64748b', fontSize: '1.1rem' }}>
+                                <div key={user._id} style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid #f1f5f9' }}>
+                                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: user.role === 'instructor' ? '#e0e7ff' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: user.role === 'instructor' ? '#4f46e5' : '#64748b', fontSize: '1.1rem' }}>
                                         {user.name.charAt(0)}
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '1rem' }}>{user.name}</div>
-                                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>{user.email}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.95rem' }}>{user.name}</div>
+                                            <span style={{ 
+                                                fontSize: '0.65rem', 
+                                                padding: '2px 6px', 
+                                                borderRadius: '4px', 
+                                                background: user.role === 'instructor' ? '#e0e7ff' : user.role === 'admin' ? '#ffedd5' : '#dcfce7',
+                                                color: user.role === 'instructor' ? '#4338ca' : user.role === 'admin' ? '#c2410c' : '#15803d',
+                                                fontWeight: 700,
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                {user.role}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{user.email}</div>
                                     </div>
-                                    <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 500 }}>
-                                        {new Date(user.createdAt).toLocaleDateString()}
+                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>
+                                        {new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                     </div>
                                 </div>
                             )) : <p style={{ color: '#94a3b8' }}>No recent users</p>}

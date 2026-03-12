@@ -112,7 +112,21 @@ router.post('/login', async (req, res) => {
         if (admin.password !== password) {
              return res.status(400).json({ msg: 'Invalid Credentials' });
         }
-        return res.json({ msg: 'Admin Login successful', user: { id: admin._id, name: admin.name, email: admin.email, role: 'admin', createdAt: admin.createdAt } });
+        return res.json({ 
+            msg: 'Admin Login successful', 
+            user: { 
+                id: admin._id, 
+                name: admin.name, 
+                email: admin.email, 
+                role: 'admin', 
+                createdAt: admin.createdAt,
+                phone: admin.phone,
+                location: admin.location,
+                bio: admin.bio,
+                resume: admin.resume,
+                socialLinks: admin.socialLinks
+            } 
+        });
     }
 
     // 3. User not found in either

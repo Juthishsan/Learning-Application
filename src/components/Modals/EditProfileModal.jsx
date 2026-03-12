@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Save, Link as LinkIcon, Facebook, Linkedin, Youtube, Globe, Twitter, Instagram, FileText } from 'lucide-react';
+import { X, Save, Link as LinkIcon, Facebook, Linkedin, Youtube, Globe, Twitter, Instagram, FileText, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
@@ -20,6 +20,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
     });
 
     const [resumeFile, setResumeFile] = useState(null);
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (user) {
@@ -41,6 +42,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
     };
 
     const handleFileChange = (e) => {
@@ -51,6 +53,16 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const newErrors = {};
+        if (!formData.name) newErrors.name = "Full Name is required";
+        
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        setErrors({});
         setLoading(true);
 
         try {
@@ -133,7 +145,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ padding: '2rem' }}>
+                <form onSubmit={handleSubmit} noValidate style={{ padding: '2rem' }}>
                     
                     {/* Basic Info */}
                     <div style={{ marginBottom: '2rem' }}>
@@ -141,7 +153,8 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div>
                                 <label style={labelStyle}>Full Name</label>
-                                <input type="text" name="name" value={formData.name} onChange={handleChange} style={inputStyle} required />
+                                <input type="text" name="name" value={formData.name} onChange={handleChange} style={{ ...inputStyle, borderColor: errors.name ? '#ef4444' : '#e2e8f0', background: errors.name ? '#fef2f2' : 'white' }} />
+                                {errors.name && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.name}</div>}
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>

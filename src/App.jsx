@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import ScrollToTop from './components/Common/ScrollToTop';
 import Navbar from './components/Common/Navbar';
 import Footer from './components/Common/Footer'; // Import Footer
 import Home from './pages/Learner/Home';
@@ -12,6 +13,7 @@ import CourseOverview from './pages/Learner/CourseOverview';
 import CourseContent from './pages/Learner/CourseContent';
 import About from './pages/Learner/About';
 import Contact from './pages/Learner/Contact';
+import Cart from './pages/Learner/Cart';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminSettings from './pages/Admin/AdminSettings';
@@ -23,6 +25,8 @@ import InstructorStudents from './pages/Instructor/InstructorStudents';
 import AdminEarnings from './pages/Admin/AdminEarnings';
 import InstructorProfile from './pages/Instructor/InstructorProfile';
 import InstructorSettings from './pages/Instructor/InstructorSettings';
+import InstructorCourseDetails from './pages/Instructor/InstructorCourseDetails';
+
 
 const NavbarWrapper = () => {
   const location = useLocation();
@@ -42,6 +46,7 @@ const FooterWrapper = () => { // Create Footer Wrapper
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Toaster position="top-center" toastOptions={{
         style: {
           background: '#333',
@@ -72,6 +77,7 @@ function App() {
             <Route path="/course-content/:id" element={<div style={{paddingTop: '0px'}}><CourseContent /></div>} />
             <Route path="/about" element={<div style={{paddingTop: '80px'}}><About /></div>} />
             <Route path="/contact" element={<div style={{paddingTop: '80px'}}><Contact /></div>} />
+            <Route path="/cart" element={<div style={{paddingTop: '80px'}}><Cart /></div>} />
             
             {/* Admin Routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -84,6 +90,7 @@ function App() {
             {/* Instructor Routes */}
             <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
             <Route path="/instructor/courses" element={<InstructorCourses />} />
+            <Route path="/instructor/courses/:id" element={<InstructorCourseDetails />} />
             <Route path="/instructor/students" element={<InstructorStudents />} />
             <Route path="/instructor/profile" element={<InstructorProfile />} />
             <Route path="/instructor/settings" element={<InstructorSettings />} />

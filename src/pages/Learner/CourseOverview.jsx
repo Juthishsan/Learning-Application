@@ -2,16 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, Clock, Users, CheckCircle, Award, Video, FileText, Lock, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../../components/Modals/ConfirmModal';
 
 const CourseOverview = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [enrolling, setEnrolling] = useState(false);
+    const [cartLoading, setCartLoading] = useState(false);
+    const [isInCart, setIsInCart] = useState(false);
     const [isEnrolled, setIsEnrolled] = useState(false);
-    const [showEnrollConfirm, setShowEnrollConfirm] = useState(false);
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -26,67 +25,75 @@ const CourseOverview = () => {
             }
         };
 
-        const checkEnrollment = async () => {
+        const checkStatus = async () => {
             const storedUser = localStorage.getItem('user');
             if (storedUser) {
                 const user = JSON.parse(storedUser);
                 try {
-                    const res = await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses`);
-                    const data = await res.json();
-                    const isEnrolledCheck = data.some(enrollment => (enrollment.courseId?._id === id || enrollment.courseId === id));
+                    // Check Enrollment
+                    const enrollRes = await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses`);
+                    const enrollData = await enrollRes.json();
+                    const isEnrolledCheck = enrollData.some(enrollment => (enrollment.courseId?._id === id || enrollment.courseId === id));
                     setIsEnrolled(isEnrolledCheck);
+
+                    // Check Cart
+                    const cartRes = await fetch(`http://localhost:5000/api/cart/${user.id || user._id}`);
+                    const cartData = await cartRes.json();
+                    // cartData is array of course objects or IDs depending on populate. 
+                    // The backend returns populated objects usually if configured, but let's check both
+                    const isInCartCheck = cartData.some(item => (item._id === id || item === id));
+                    setIsInCart(isInCartCheck);
+
                 } catch (err) {
-                    console.error("Failed to check enrollment");
+                    console.error("Failed to check status");
                 }
             }
         };
 
         fetchCourse();
-        checkEnrollment();
+        checkStatus();
     }, [id]);
 
-    const handleEnroll = () => {
+    const handleAddToCart = async () => {
         if (isEnrolled) {
             navigate(`/course-content/${id}`);
             return;
         }
 
+        if (isInCart) {
+            navigate('/cart');
+            return;
+        }
+
         const storedUser = localStorage.getItem('user');
         if (!storedUser) {
-            toast('Please login to enroll!', { icon: '🔒' });
+            toast('Please login to add to cart!', { icon: '🔒' });
             navigate('/login');
             return;
         }
 
-        setShowEnrollConfirm(true);
-    };
-
-    const performEnroll = async () => {
-        const storedUser = localStorage.getItem('user');
         const user = JSON.parse(storedUser);
-        setEnrolling(true);
+        setCartLoading(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/users/enroll', {
+            const res = await fetch(`http://localhost:5000/api/cart/${user.id || user._id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id || user._id, courseId: id })
+                body: JSON.stringify({ courseId: id })
             });
-            const data = await res.json();
-            
+
             if (res.ok) {
-                toast.success('Enrolled Successfully!');
-                setIsEnrolled(true);
-                navigate(`/course-content/${id}`);
+                toast.success('Added to Cart');
+                setIsInCart(true);
             } else {
-                toast.error(data.msg || 'Enrollment failed');
+                const data = await res.json();
+                toast.error(data.msg || 'Failed to add to cart');
             }
         } catch (err) {
             console.error(err);
-            toast.error('Enrollment failed');
+            toast.error('Failed to add to cart');
         } finally {
-            setEnrolling(false);
-            setShowEnrollConfirm(false);
+            setCartLoading(false);
         }
     };
 
@@ -130,13 +137,13 @@ const CourseOverview = () => {
                                 <div style={{ display: 'flex' }}>
                                     {[1,2,3,4,5].map(star => <Star key={star} size={20} fill="#fbbf24" stroke="#fbbf24" />)}
                                 </div>
-                                <span style={{ fontWeight: 700, color: '#fbbf24' }}>{course.rating}</span>
+                                <span style={{ fontWeight: 700, color: '#fbbf24' }}>{course.rating || 4.5}</span>
                                 <span style={{ color: '#94a3b8' }}>(1,240 ratings)</span>
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#e2e8f0' }}>
                                 <Users size={20} />
-                                <span>4,800 students enrolled</span>
+                                <span>{course.students || 0} students enrolled</span>
                             </div>
                         </div>
                         
@@ -241,8 +248,8 @@ const CourseOverview = () => {
                             </div>
                             
                             <button 
-                                onClick={handleEnroll}
-                                disabled={enrolling}
+                                onClick={handleAddToCart}
+                                disabled={cartLoading}
                                 style={{ 
                                     width: '100%', 
                                     padding: '1rem', 
@@ -251,14 +258,14 @@ const CourseOverview = () => {
                                     borderRadius: '0.75rem',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    background: isEnrolled ? '#10b981' : '#2563eb',
+                                    background: isEnrolled ? '#10b981' : (isInCart ? '#4f46e5' : '#2563eb'),
                                     color: 'white',
                                     marginBottom: '1rem',
                                     transition: 'all 0.2s',
                                     boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)'
                                 }}
                             >
-                                {enrolling ? 'Processing...' : (isEnrolled ? 'Go to Course' : 'Enroll Now')}
+                                {cartLoading ? 'Processing...' : (isEnrolled ? 'Go to Course' : (isInCart ? 'Go to Cart' : 'Add to Cart'))}
                             </button>
                             
                             <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#64748b', marginBottom: '2rem' }}>30-Day Money-Back Guarantee</p>
@@ -293,18 +300,6 @@ const CourseOverview = () => {
                 .container { margin-top: 0 !important; }
             }
             `}</style>
-
-            <ConfirmModal
-                isOpen={showEnrollConfirm}
-                onClose={() => setShowEnrollConfirm(false)}
-                onConfirm={performEnroll}
-                title="Confirm Enrollment"
-                message={`Are you sure you want to enroll in "${course.title}"? This will give you instant access to all course materials.`}
-                confirmText="Yes, Enroll Now"
-                cancelText="Maybe Later"
-                isDestructive={false}
-                icon={CheckCircle}
-            />
         </div>
     );
 };

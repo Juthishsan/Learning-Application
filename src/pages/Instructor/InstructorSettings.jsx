@@ -87,21 +87,21 @@ const InstructorSettings = () => {
                                         <label style={labelStyle}>Current Password</label>
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} style={iconStyle} />
-                                            <input type="password" name="current" value={passwordData.current} onChange={handlePasswordChange} style={inputStyle} placeholder="••••••••" />
+                                            <input type="password" name="current" value={passwordData.current} onChange={handlePasswordChange} style={inputStyle} placeholder="Password" />
                                         </div>
                                     </div>
                                     <div>
                                         <label style={labelStyle}>New Password</label>
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} style={iconStyle} />
-                                            <input type="password" name="new" value={passwordData.new} onChange={handlePasswordChange} style={inputStyle} placeholder="••••••••" />
+                                            <input type="password" name="new" value={passwordData.new} onChange={handlePasswordChange} style={inputStyle} placeholder="Password" />
                                         </div>
                                     </div>
                                     <div>
                                         <label style={labelStyle}>Confirm New Password</label>
                                         <div style={{ position: 'relative' }}>
                                             <Lock size={18} style={iconStyle} />
-                                            <input type="password" name="confirm" value={passwordData.confirm} onChange={handlePasswordChange} style={inputStyle} placeholder="••••••••" />
+                                            <input type="password" name="confirm" value={passwordData.confirm} onChange={handlePasswordChange} style={inputStyle} placeholder="Password" />
                                         </div>
                                     </div>
                                     <button type="submit" style={buttonStyle}>Update Password</button>

@@ -162,6 +162,7 @@ const AdminSettings = () => {
                                                 style={{ ...inputStyle, paddingLeft: '2.5rem', paddingRight: '2.5rem' }} 
                                                 value={securityData.currentPassword} 
                                                 onChange={e => setSecurityData({...securityData, currentPassword: e.target.value})} 
+                                                placeholder="Password"
                                             />
                                             <button 
                                                 type="button"
@@ -183,6 +184,7 @@ const AdminSettings = () => {
                                                     style={{ ...inputStyle, paddingLeft: '2.5rem', paddingRight: '2.5rem' }} 
                                                     value={securityData.newPassword} 
                                                     onChange={e => setSecurityData({...securityData, newPassword: e.target.value})} 
+                                                    placeholder="Password"
                                                 />
                                                 <button 
                                                     type="button"
@@ -203,6 +205,7 @@ const AdminSettings = () => {
                                                     style={{ ...inputStyle, paddingLeft: '2.5rem', paddingRight: '2.5rem' }} 
                                                     value={securityData.confirmPassword} 
                                                     onChange={e => setSecurityData({...securityData, confirmPassword: e.target.value})} 
+                                                    placeholder="Password"
                                                 />
                                                 <button 
                                                     type="button"

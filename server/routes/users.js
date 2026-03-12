@@ -4,6 +4,32 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const Instructor = require('../models/Instructor');
+const Admin = require('../models/Admin');
+
+const calculateAndSetProgress = (enrollment, course) => {
+    if (!course || !course.content) return 0;
+    
+    let totalItems = course.content.length;
+    if (course.assignments) totalItems += course.assignments.length;
+    if (course.quizzes) totalItems += course.quizzes.length;
+    
+    if (totalItems === 0) {
+        enrollment.progress = 0;
+        return 0;
+    }
+    
+    let completedItems = enrollment.completedContent ? enrollment.completedContent.length : 0;
+    if (enrollment.assignments) completedItems += enrollment.assignments.length;
+    if (enrollment.quizzes) {
+        // Only count passed quizzes towards progress completion length if desired
+        completedItems += enrollment.quizzes.filter(q => q.score >= 80).length;
+    }
+    
+    let newProgress = Math.round((completedItems / totalItems) * 100);
+    newProgress = Math.min(newProgress, 100);
+    enrollment.progress = newProgress;
+    return newProgress;
+};
 
 // Enroll in a Course
 router.post('/enroll', async (req, res) => {
@@ -26,6 +52,30 @@ router.post('/enroll', async (req, res) => {
         await user.save();
 
         res.json({ msg: 'Enrolled successfully', enrolledCourses: user.enrolledCourses });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// Unenroll from a Course
+router.delete('/:userId/courses/:courseId', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+
+        // Filter out the course
+        const initialLength = user.enrolledCourses.length;
+        user.enrolledCourses = user.enrolledCourses.filter(
+            enrollment => enrollment.courseId.toString() !== req.params.courseId
+        );
+
+        if (user.enrolledCourses.length === initialLength) {
+            return res.status(404).json({ msg: 'Course enrollment not found' });
+        }
+
+        await user.save();
+        res.json({ msg: 'Unenrolled successfully', enrolledCourses: user.enrolledCourses });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -56,6 +106,9 @@ router.post('/:userId/courses/:courseId/assignment', async (req, res) => {
         } else {
             enrollment.assignments.push({ assignmentId, score });
         }
+
+        const course = await Course.findById(req.params.courseId);
+        calculateAndSetProgress(enrollment, course);
 
         await user.save();
         res.json({ msg: 'Assignment saved', assignments: enrollment.assignments });
@@ -97,6 +150,9 @@ router.post('/:userId/courses/:courseId/quiz', async (req, res) => {
             enrollment.quizzes.push({ quizId, score });
         }
 
+        const course = await Course.findById(req.params.courseId);
+        calculateAndSetProgress(enrollment, course);
+
         await user.save();
         res.json({ msg: 'Quiz saved', quizzes: enrollment.quizzes });
 
@@ -136,18 +192,9 @@ router.post('/:userId/courses/:courseId/complete', async (req, res) => {
             enrollment.completedContent.push(contentId); // Mark
         }
 
-        // Recalculate Progress
-        // Total items = course.content.length + (assignments count if any, assuming 1 for now or 0)
-        // For now, let's base it purely on course.content items (videos/pdfs)
-        const totalItems = course.content.length;
-        const completedItems = enrollment.completedContent.length;
-        
-        let newProgress = 0;
-        if (totalItems > 0) {
-            newProgress = Math.round((completedItems / totalItems) * 100);
-        }
-        
-        enrollment.progress = newProgress;
+        // Recalculate Progress Dynamically
+        calculateAndSetProgress(enrollment, course);
+
 
         await user.save();
         res.json({ 
@@ -168,6 +215,21 @@ router.get('/:userId/courses', async (req, res) => {
         const user = await User.findById(req.params.userId).populate('enrolledCourses.courseId');
         if (!user) return res.status(404).json({ msg: 'User not found' });
 
+        let needsSave = false;
+        user.enrolledCourses.forEach(enrollment => {
+            if (enrollment.courseId) {
+                const oldProgress = enrollment.progress;
+                calculateAndSetProgress(enrollment, enrollment.courseId);
+                if (oldProgress !== enrollment.progress) {
+                    needsSave = true;
+                }
+            }
+        });
+
+        if (needsSave) {
+            await user.save();
+        }
+
         res.json(user.enrolledCourses);
     } catch (err) {
         console.error(err.message);
@@ -178,8 +240,14 @@ router.get('/:userId/courses', async (req, res) => {
 // Get User Details
 router.get('/:userId', async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId).select('-password');
-        if (!user) return res.status(404).json({ msg: 'User not found' });
+        let user = await User.findById(req.params.userId).select('-password');
+        
+        if (!user) {
+            // Check Admin collection
+            user = await Admin.findById(req.params.userId).select('-password');
+            if (!user) return res.status(404).json({ msg: 'User not found' });
+        }
+        
         res.json(user);
     } catch (err) {
         console.error(err.message);
@@ -252,6 +320,9 @@ router.post('/:userId/courses/:courseId/assignments/:assignmentId/upload', submi
             });
         }
 
+        const course = await Course.findById(req.params.courseId);
+        calculateAndSetProgress(enrollment, course);
+
         await user.save();
         res.json({ msg: 'Assignment submitted', assignments: enrollment.assignments });
 
@@ -291,10 +362,14 @@ router.post('/:userId/resume', upload.single('resume'), async (req, res) => {
 router.put('/:userId/profile', async (req, res) => {
     try {
         const { name, bio, socialLinks, resume, phone, location, expertise } = req.body;
-        const user = await User.findById(req.params.userId);
+        let user = await User.findById(req.params.userId);
 
         if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
+            // Check if it is an admin
+            user = await Admin.findById(req.params.userId);
+            if (!user) {
+                return res.status(404).json({ msg: 'User not found' });
+            }
         }
 
         const oldName = user.name;

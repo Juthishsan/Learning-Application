@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PlayCircle, FileText, CheckCircle, ChevronLeft, Menu, Lock, Download, ChevronRight, Video, File, HelpCircle, Check, X as XIcon, RefreshCw, Trophy, ArrowRight, Clock, AlertCircle, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
+import CustomVideoPlayer from '../../components/Learner/CustomVideoPlayer';
 
 // Helper to mix content array with assignments and quizzes
 const mergeContent = (course) => {
@@ -107,8 +108,15 @@ const CourseContent = () => {
                 setMixedContent(allContent);
 
                 // Set first content as active if available and not already set
-                if (!activeContent && allContent.length > 0) {
-                    setActiveContent(allContent[0]);
+                // Determine layout order to match sidebar visually
+                const videoContents = allContent.filter(c => c.type === 'video');
+                const studyMaterials = allContent.filter(c => c.type === 'pdf' || c.type === 'image');
+                const assignmentsList = allContent.filter(c => c.type === 'assignment');
+                const quizzesList = allContent.filter(c => c.type === 'quiz');
+                const sidebarOrderContent = [...videoContents, ...studyMaterials, ...assignmentsList, ...quizzesList];
+
+                if (!activeContent && sidebarOrderContent.length > 0) {
+                    setActiveContent(sidebarOrderContent[0]);
                 }
                 
                 setLoading(false);
@@ -304,7 +312,8 @@ const CourseContent = () => {
     const quizzesList = mixedContent.filter(c => c.type === 'quiz');
 
     
-    const isScrollablePage = activeContent?.type === 'assignment' || activeContent?.type === 'quiz' || (!isPdf && activeContent?.type !== 'video');
+    // Make video page scrollable to show description below
+    const isScrollablePage = activeContent?.type === 'assignment' || activeContent?.type === 'quiz' || activeContent?.type === 'video' || (!isPdf);
     
     // --- Assignment Dashboard Logic ---
     let savedData = null;
@@ -316,7 +325,7 @@ const CourseContent = () => {
     const isCurrentContextCompleted = completedContent.includes(activeContent?._id);
 
     return (
-        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'white', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'white', fontFamily: "'Inter', sans-serif", paddingTop: '80px', boxSizing: 'border-box' }}>
             
             {/* Sidebar (Playlist) */}
             <div 
@@ -329,8 +338,8 @@ const CourseContent = () => {
                     transition: 'width 0.3s ease',
                     overflow: 'hidden',
                     flexShrink: 0,
+                    flexShrink: 0,
                     position: 'relative',
-                    marginTop: '80px' // Offset for fixed navbar
                 }}
             >
                 <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
@@ -513,7 +522,7 @@ const CourseContent = () => {
             </div>
 
             {/* Main Content Area */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'white', marginTop: '80px' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'white' }}>
                 
                 {/* Top Bar */}
                 <div style={{ height: '60px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', background: '#fff', flexShrink: 0 }}>
@@ -559,7 +568,7 @@ const CourseContent = () => {
                 </div>
 
                 {/* Viewer */}
-                <div style={{ flex: 1, overflowY: isScrollablePage ? 'auto' : 'hidden', background: activeContent?.type === 'assignment' || activeContent?.type === 'quiz' ? '#f8fafc' : '#2d2f31' }}> 
+                <div style={{ flex: 1, overflowY: isScrollablePage ? 'auto' : 'hidden', background: activeContent?.type === 'video' ? 'white' : (activeContent?.type === 'assignment' || activeContent?.type === 'quiz' ? '#f8fafc' : '#2d2f31') }}> 
                     
                     <div style={{ maxWidth: '100%', minHeight: isScrollablePage ? '100%' : 'auto', height: isScrollablePage ? 'auto' : '100%', display: 'flex', flexDirection: 'column' }}>
                         
@@ -913,16 +922,56 @@ const CourseContent = () => {
                             </div>
                         ) : activeContent ? (
                             // --- REGULAR CONTENT (VIDEO/PDF) ---
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: isPdf ? '100%' : 'auto', minHeight: '100%', overflow: isPdf ? 'hidden' : 'visible' }}>
                                 {/* Ensure inner content takes full height for PDF/Video */}
                                 {activeContent.type === 'video' ? (
-                                    <div style={{ flex: 1, background: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                        <video 
-                                            src={activeContent.url} 
-                                            controls 
-                                            style={{ width: '100%', maxHeight: '100%', outline: 'none' }} 
-                                            controlsList="nodownload"
-                                        />
+                                    <div style={{ display: 'flex', flexDirection: 'column', height: 'auto', minHeight: '100%' }}>
+                                        {/* Video Theater Mode Container */}
+                                        <div style={{ width: '100%', background: 'black', padding: '1rem 0', display: 'flex', justifyContent: 'center' }}>
+                                            <div style={{ width: '100%', maxWidth: '1100px', aspectRatio: '16/9', position: 'relative' }}>
+                                                <CustomVideoPlayer 
+                                                    src={activeContent.url} 
+                                                    title={activeContent.title}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Video Info Section */}
+                                        <div style={{ maxWidth: '1100px', margin: '0 auto', width: '100%', padding: '2rem' }}>
+                                            <div style={{ borderBottom: '1px solid #e2e8f0', marginBottom: '1.5rem', display: 'flex', gap: '2rem' }}>
+                                                <button style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', borderBottom: '2px solid #2563eb', color: '#2563eb', fontWeight: 600, cursor: 'pointer' }}>
+                                                    Overview
+                                                </button>
+                                                <button style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>
+                                                    Notes
+                                                </button>
+                                                <button style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>
+                                                    Resources
+                                                </button>
+                                            </div>
+
+                                            <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1e293b', marginBottom: '1rem' }}>
+                                                {activeContent.title}
+                                            </h1>
+                                            
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', fontSize: '0.9rem', color: '#64748b' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', fontWeight: 700 }}>
+                                                        {course?.instructor?.charAt(0) || 'I'}
+                                                    </div>
+                                                    <span style={{ fontWeight: 600, color: '#334155' }}>{course?.instructor || 'Instructor'}</span>
+                                                </div>
+                                                <span>•</span>
+                                                <span>Last updated {new Date().toLocaleDateString()}</span>
+                                            </div>
+
+                                            <div style={{ lineHeight: '1.7', color: '#475569', fontSize: '1rem' }}>
+                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>About this lesson</h3>
+                                                <p>
+                                                    {activeContent.description || 'In this lesson, you will learn the fundamental concepts and practical applications. Make sure to take notes and review the attached resources.'}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : isPdf ? (
                                     <div style={{ flex: 1, background: '#525659', height: '100%', display: 'flex', flexDirection: 'column' }}>

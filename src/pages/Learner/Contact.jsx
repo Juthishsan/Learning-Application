@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Send, MapPin, Phone, Mail, Clock, MessageSquare } from 'lucide-react';
+import { Send, MapPin, Phone, Mail, Clock, MessageSquare, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Contact = () => {
@@ -11,14 +11,30 @@ const Contact = () => {
         message: ''
     });
     const [status, setStatus] = useState('idle'); // idle, submitting, success, error
+    const [errors, setErrors] = useState({});
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: null });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        const newErrors = {};
+        if (!formData.name) newErrors.name = "Name is required";
+        if (!formData.email) newErrors.email = "Email is required";
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Invalid email";
+        if (!formData.subject) newErrors.subject = "Subject is required";
+        if (!formData.message) newErrors.message = "Message is required";
+        
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
         setStatus('submitting');
+        setErrors({});
         const loadingToast = toast.loading('Sending message...');
         
         try {
@@ -146,7 +162,7 @@ const Contact = () => {
                         </h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Fill up the form and our team will get back to you within 24 hours.</p>
 
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     <label style={{ fontSize: '0.9rem', fontWeight: 600, color: '#475569' }}>Full Name</label>
@@ -156,9 +172,9 @@ const Contact = () => {
                                         value={formData.name}
                                         onChange={handleChange}
                                         placeholder="John Doe"
-                                        required
-                                        style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', transition: 'border 0.3s' }}
+                                        style={{ padding: '0.75rem', borderRadius: '8px', border: `1px solid ${errors.name ? '#ef4444' : '#e2e8f0'}`, outline: 'none', transition: 'border 0.3s', background: errors.name ? '#fef2f2' : 'white' }}
                                     />
+                                    {errors.name && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem' }}><AlertCircle size={14} /> {errors.name}</div>}
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     <label style={{ fontSize: '0.9rem', fontWeight: 600, color: '#475569' }}>Email Address</label>
@@ -168,9 +184,9 @@ const Contact = () => {
                                         value={formData.email}
                                         onChange={handleChange}
                                         placeholder="john@example.com"
-                                        required
-                                        style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', transition: 'border 0.3s' }}
+                                        style={{ padding: '0.75rem', borderRadius: '8px', border: `1px solid ${errors.email ? '#ef4444' : '#e2e8f0'}`, outline: 'none', transition: 'border 0.3s', background: errors.email ? '#fef2f2' : 'white' }}
                                     />
+                                    {errors.email && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem' }}><AlertCircle size={14} /> {errors.email}</div>}
                                 </div>
                             </div>
 
@@ -182,9 +198,9 @@ const Contact = () => {
                                     value={formData.subject}
                                     onChange={handleChange}
                                     placeholder="Course Inquiry / Career Guidance"
-                                    required
-                                    style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', transition: 'border 0.3s' }}
+                                    style={{ padding: '0.75rem', borderRadius: '8px', border: `1px solid ${errors.subject ? '#ef4444' : '#e2e8f0'}`, outline: 'none', transition: 'border 0.3s', background: errors.subject ? '#fef2f2' : 'white' }}
                                 />
+                                {errors.subject && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem' }}><AlertCircle size={14} /> {errors.subject}</div>}
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -195,9 +211,9 @@ const Contact = () => {
                                     onChange={handleChange}
                                     rows="5"
                                     placeholder="Tell us more about how we can help you..."
-                                    required
-                                    style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', outline: 'none', transition: 'border 0.3s', resize: 'vertical' }}
+                                    style={{ padding: '0.75rem', borderRadius: '8px', border: `1px solid ${errors.message ? '#ef4444' : '#e2e8f0'}`, outline: 'none', transition: 'border 0.3s', resize: 'vertical', background: errors.message ? '#fef2f2' : 'white' }}
                                 ></textarea>
+                                {errors.message && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem' }}><AlertCircle size={14} /> {errors.message}</div>}
                             </div>
 
                             <button 
