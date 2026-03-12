@@ -45,6 +45,25 @@ router.post('/', courseUpload.single('thumbnail'), async (req, res) => {
     });
     await log.save();
 
+    // --- NEW: Notify all users about the new course ---
+    const Notification = require('../models/Notification');
+    const User = require('../models/User');
+
+    // Notify users about new courses. For a real app, you might only notify users interested in certain categories.
+    const allUsers = await User.find({ role: 'student' });
+    const notifications = allUsers.map(user => ({
+        userId: user._id,
+        title: 'New Course Available',
+        message: `'${course.title}' is now live! Check it out.`,
+        type: 'course',
+        unread: true
+    }));
+
+    if (notifications.length > 0) {
+        await Notification.insertMany(notifications);
+    }
+    // ----------------------------------------
+
     res.json(course);
   } catch (err) {
     console.error(err.message);
@@ -172,6 +191,25 @@ router.post('/:id/content', courseUpload.single('file'), async (req, res) => {
             });
             await log.save();
 
+            // --- NEW: Notify all enrolled students ---
+            const Notification = require('../models/Notification');
+            const User = require('../models/User');
+
+            const students = await User.find({ 'enrolledCourses.courseId': course._id });
+            
+            const notifications = students.map(student => ({
+                userId: student._id,
+                title: 'New Course Material',
+                message: `New material '${newContent.title}' has been added to ${course.title}.`,
+                type: 'system', // or perhaps a new 'material' type if you want a custom icon
+                unread: true
+            }));
+
+            if (notifications.length > 0) {
+                await Notification.insertMany(notifications);
+            }
+            // ----------------------------------------
+
             res.json(course.content);
         } else {
             res.status(400).send('Upload failed');
@@ -241,6 +279,25 @@ router.post('/:id/assignments', async (req, res) => {
         const newAssignment = req.body; // { title, description, dueDate }
         course.assignments.push(newAssignment);
         await course.save();
+
+        // --- NEW: Notify all enrolled students ---
+        const Notification = require('../models/Notification');
+        const User = require('../models/User');
+
+        const students = await User.find({ 'enrolledCourses.courseId': course._id });
+        
+        const notifications = students.map(student => ({
+            userId: student._id,
+            title: 'Assignment Due',
+            message: `A new assignment '${newAssignment.title}' has been added to ${course.title}. Due Date: ${newAssignment.dueDate ? new Date(newAssignment.dueDate).toLocaleDateString() : 'N/A'}.`,
+            type: 'assignment',
+            unread: true
+        }));
+
+        if (notifications.length > 0) {
+            await Notification.insertMany(notifications);
+        }
+        // ----------------------------------------
 
         res.json(course.assignments);
     } catch (err) {

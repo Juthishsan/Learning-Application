@@ -119,6 +119,40 @@ router.post('/:userId/courses/:courseId/assignment', async (req, res) => {
     }
 });
 
+// Grade Student Assignment
+router.put('/:userId/courses/:courseId/assignments/:assignmentId/grade', async (req, res) => {
+    try {
+        const { score } = req.body;
+        const user = await User.findById(req.params.userId);
+        
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+
+        const enrollment = user.enrolledCourses.find(
+            e => e.courseId.toString() === req.params.courseId || (e.courseId._id && e.courseId._id.toString() === req.params.courseId)
+        );
+
+        if (!enrollment) return res.status(404).json({ msg: 'Enrollment not found' });
+
+        const existingAssign = enrollment.assignments.find(a => a.assignmentId === req.params.assignmentId);
+        
+        if (!existingAssign) {
+             return res.status(404).json({ msg: 'Assignment submission not found' });
+        }
+
+        existingAssign.score = score;
+
+        const course = await Course.findById(req.params.courseId);
+        // Note: progress calculation will include the score implicitly if required
+        calculateAndSetProgress(enrollment, course);
+
+        await user.save();
+        res.json({ msg: 'Assignment graded successfully', assignments: enrollment.assignments });
+    } catch (err) {
+         console.error(err);
+         res.status(500).send('Server Error');
+    }
+});
+
 // Submit Quiz
 router.post('/:userId/courses/:courseId/quiz', async (req, res) => {
     try {

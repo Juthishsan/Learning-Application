@@ -3,6 +3,7 @@ import { BookOpen, Users, IndianRupee, TrendingUp, Star, Plus, Search, Bell, Cal
 import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import AnnounceModal from '../../components/Modals/AnnounceModal';
 
 const dashboardVariants = {
     hidden: { opacity: 0 },
@@ -76,6 +77,7 @@ const InstructorDashboard = () => {
     const [recentEnrollments, setRecentEnrollments] = useState([]);
     const [myCourses, setMyCourses] = useState([]);
     const [user, setUser] = useState({});
+    const [showAnnounceModal, setShowAnnounceModal] = useState(false);
 
     const [pendingTasks, setPendingTasks] = useState([]);
 
@@ -101,7 +103,7 @@ const InstructorDashboard = () => {
                 let recent = [];
                 let courseTally = {};
                 filtered.forEach(c => courseTally[c._id] = 0);
-                let assignmentsToGrade = 0;
+                let courseGradesPending = {};
                 let totalEnrollments = 0;
 
                 allUsers.forEach(u => {
@@ -126,7 +128,7 @@ const InstructorDashboard = () => {
                                 if (enrollment.assignments) {
                                     enrollment.assignments.forEach(a => {
                                         if (a.submissionUrl && (a.score === undefined || a.score === null)) {
-                                            assignmentsToGrade++;
+                                            courseGradesPending[courseIdStr] = (courseGradesPending[courseIdStr] || 0) + 1;
                                         }
                                     });
                                 }
@@ -151,9 +153,19 @@ const InstructorDashboard = () => {
                 setRecentEnrollments(recent.reverse().slice(0, 5));
 
                 const dynamicPendingTasks = [];
-                if (assignmentsToGrade > 0) {
-                    dynamicPendingTasks.push({ title: "Grade Assignments", count: assignmentsToGrade, type: 'assignment', color: '#f59e0b', bg: '#fef3c7' });
-                }
+                Object.keys(courseGradesPending).forEach(courseIdStr => {
+                    const myCourse = filtered.find(c => c._id === courseIdStr);
+                    if (myCourse) {
+                        dynamicPendingTasks.push({ 
+                            title: `Grade Assignments - ${myCourse.title}`, 
+                            count: courseGradesPending[courseIdStr], 
+                            type: 'assignment', 
+                            color: '#f59e0b', 
+                            bg: '#fef3c7',
+                            courseId: courseIdStr
+                        });
+                    }
+                });
                 setPendingTasks(dynamicPendingTasks);
 
             } catch (err) {
@@ -205,10 +217,10 @@ const InstructorDashboard = () => {
                                 onBlur={e => e.target.style.borderColor = '#e2e8f0'}
                             />
                         </div>
-                        <button style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.transform='translateY(-2px)'} onMouseOut={e=>e.currentTarget.style.transform='translateY(0)'}>
+                        {/* <button style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.transform='translateY(-2px)'} onMouseOut={e=>e.currentTarget.style.transform='translateY(0)'}>
                             <Bell size={20} color="#64748b" />
                             <div style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', position: 'absolute', top: '12px', right: '12px', border: '2px solid white' }}></div>
-                        </button>
+                        </button> */}
                         <div style={{ height: '48px', padding: '0 1.25rem', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#475569', fontWeight: 700, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
                             <Calendar size={18} color="#4f46e5" />
                             <span style={{ fontSize: '0.95rem' }}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
@@ -334,36 +346,37 @@ const InstructorDashboard = () => {
                                 </button>
                                 
                                 <button 
-                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#334155', cursor: 'pointer', transition: 'all 0.2s' }}
-                                    onMouseOver={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                                    onMouseOut={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderRadius: '16px', background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)', border: 'none', color: 'white', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 10px 15px -3px rgba(236, 72, 153, 0.3)' }}
+                                    onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                                    onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ec4899', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                                        <Video size={22} />
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Video size={24} color="white" />
                                     </div>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>Live Class</span>
+                                    <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>Live Class</span>
                                 </button>
 
                                 <button 
-                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#334155', cursor: 'pointer', transition: 'all 0.2s' }}
-                                    onMouseOver={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                                    onMouseOut={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                    onClick={() => setShowAnnounceModal(true)}
+                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: 'white', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' }}
+                                    onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                                    onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                                        <MessageSquare size={22} />
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <MessageSquare size={24} color="white" />
                                     </div>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>Announce</span>
+                                    <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>Announce</span>
                                 </button>
                                 
                                 <button 
-                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#334155', cursor: 'pointer', transition: 'all 0.2s' }}
-                                    onMouseOver={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                                    onMouseOut={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderRadius: '16px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', color: 'white', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 10px 15px -3px rgba(245, 158, 11, 0.3)' }}
+                                    onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                                    onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                                        <FileText size={22} />
+                                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <FileText size={24} color="white" />
                                     </div>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>Reports</span>
+                                    <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>Reports</span>
                                 </button>
                             </div>
                         </div>
@@ -377,7 +390,13 @@ const InstructorDashboard = () => {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {pendingTasks.map((task, idx) => (
-                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#f8fafc', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                                    <div 
+                                        key={idx} 
+                                        onClick={() => task.courseId && navigate(`/instructor/courses/${task.courseId}`, { state: { tab: 'gradebook' } })}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#f8fafc', borderRadius: '16px', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        onMouseOver={e=> { e.currentTarget.style.borderColor='#cbd5e1'; e.currentTarget.style.transform='translateY(-2px)' }} 
+                                        onMouseOut={e=> { e.currentTarget.style.borderColor='#f1f5f9'; e.currentTarget.style.transform='translateY(0)' }}
+                                    >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: task.bg, color: task.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 {task.type === 'assignment' ? <FileText size={18} /> : task.type === 'qa' ? <MessageSquare size={18} /> : <CheckCircle size={18} />}
@@ -401,6 +420,12 @@ const InstructorDashboard = () => {
                     </div>
                 </div>
             </main>
+
+            <AnnounceModal 
+                isOpen={showAnnounceModal}
+                onClose={() => setShowAnnounceModal(false)}
+                user={user}
+            />
         </div>
     );
 };

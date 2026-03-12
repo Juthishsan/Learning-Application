@@ -1,15 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary: #4f46e5; /* Indigo 600 */
+  --primary: #4f46e5;
   --primary-hover: #4338ca;
-  --secondary: #0ea5e9; /* Sky 500 */
-  --accent: #f59e0b; /* Amber 500 */
+  --primary-light: #eef2ff;
+  --secondary: #0ea5e9;
+  --accent: #f59e0b;
   
-  --bg-main: #f8fafc; /* Slate 50 */
+  --bg-main: #f8fafc;
   --bg-card: #ffffff;
-  --text-main: #0f172a; /* Slate 900 */
-  --text-muted: #64748b; /* Slate 500 */
+  --bg-secondary: #f1f5f9;
+  
+  --text-main: #0f172a;
+  --text-title: #0f172a;
+  --text-muted: #475569;
+  --text-light: #64748b;
+  --text-lighter: #94a3b8;
+  
+  --border-color: #e2e8f0;
+  --border-light: #f1f5f9;
   
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
