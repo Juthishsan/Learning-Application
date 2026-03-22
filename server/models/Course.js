@@ -46,7 +46,14 @@ const CourseSchema = new mongoose.Schema({
           url: String,
           public_id: String,
           fileName: String,
-          description: String
+          description: String,
+          transcript: [
+            {
+              text: String,
+              startTime: Number, // In seconds
+              endTime: Number    // In seconds
+            }
+          ]
       }
   ],
   assignments: [

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Settings, RotateCcw, FastForward, Check } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Settings, RotateCcw, RotateCw, Check } from 'lucide-react';
 
-const CustomVideoPlayer = ({ src, title }) => {
+const CustomVideoPlayer = ({ src, title, seekTo = 0, onTimeUpdate }) => {
     const videoRef = useRef(null);
     const containerRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -14,11 +14,26 @@ const CustomVideoPlayer = ({ src, title }) => {
     const [playbackRate, setPlaybackRate] = useState(1);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
+    // External Seek Handler
+    useEffect(() => {
+        if (videoRef.current && seekTo > 0) {
+            videoRef.current.currentTime = seekTo;
+            setCurrentTime(seekTo);
+            if (!isPlaying) {
+                videoRef.current.play();
+                setIsPlaying(true);
+            }
+        }
+    }, [seekTo]);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        const updateTime = () => setCurrentTime(video.currentTime);
+        const updateTime = () => {
+            setCurrentTime(video.currentTime);
+            if (onTimeUpdate) onTimeUpdate(video.currentTime);
+        };
         const updateDuration = () => setDuration(video.duration);
         const onEnded = () => setIsPlaying(false);
 
@@ -31,7 +46,7 @@ const CustomVideoPlayer = ({ src, title }) => {
             video.removeEventListener('loadedmetadata', updateDuration);
             video.removeEventListener('ended', onEnded);
         };
-    }, []);
+    }, [onTimeUpdate]);
 
     // Handle Source Change
     useEffect(() => {
@@ -90,6 +105,29 @@ const CustomVideoPlayer = ({ src, title }) => {
         videoRef.current.playbackRate = rate;
         setShowSpeedMenu(false);
     };
+
+    const skipForward = () => {
+        if (!videoRef.current) return;
+        videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10);
+    };
+
+    const skipBackward = () => {
+        if (!videoRef.current) return;
+        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'ArrowRight') {
+                skipForward();
+            } else if (e.key === 'ArrowLeft') {
+                skipBackward();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const formatTime = (time) => {
         if (isNaN(time)) return "00:00";
@@ -244,6 +282,17 @@ const CustomVideoPlayer = ({ src, title }) => {
                         <button onClick={togglePlay} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: 0, display: 'flex' }}>
                             {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" />}
                         </button>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <button onClick={skipBackward} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: 0, display: 'flex', opacity: 0.9 }}>
+                                <RotateCcw size={22} />
+                                <span style={{ fontSize: '10px', position: 'absolute', transform: 'translate(6px, 6px)', fontWeight: 800 }}>10</span>
+                            </button>
+                            <button onClick={skipForward} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: 0, display: 'flex', opacity: 0.9 }}>
+                                <RotateCw size={22} />
+                                <span style={{ fontSize: '10px', position: 'absolute', transform: 'translate(6px, 6px)', fontWeight: 800 }}>10</span>
+                            </button>
+                        </div>
                         
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }} className="volume-container">
                             <button onClick={toggleMute} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: 0, display: 'flex' }}>

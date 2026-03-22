@@ -4,7 +4,7 @@ import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
 import { 
     LayoutDashboard, FileText, Video, ClipboardList, GraduationCap, Users, 
     Plus, Trash2, Search, ArrowLeft, MoreVertical, Edit, Upload, Download,
-    CheckCircle, X, Check, HelpCircle, PlusCircle, Clock, Loader2
+    CheckCircle, X, Check, HelpCircle, PlusCircle, Clock, Loader2, Sparkles, FileUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -41,6 +41,7 @@ const InstructorCourseDetails = () => {
         title: '', 
         questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] 
     });
+    const [isGeneratingAIQuiz, setIsGeneratingAIQuiz] = useState(false);
     const [editingAssignment, setEditingAssignment] = useState(null);
     const [editingQuiz, setEditingQuiz] = useState(null);
 
@@ -340,6 +341,39 @@ const InstructorCourseDetails = () => {
         const newQuestions = [...quizForm.questions];
         newQuestions[qIndex].options[oIndex] = value;
         setQuizForm({ ...quizForm, questions: newQuestions });
+    };
+
+    const handleGenerateAIQuiz = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsGeneratingAIQuiz(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(`http://localhost:5000/api/courses/${id}/quizzes/generate`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (res.ok) {
+                const generatedQuestions = await res.json();
+                setQuizForm({
+                    ...quizForm,
+                    questions: generatedQuestions
+                });
+                toast.success("AI significantly boosted your quiz creation!");
+            } else {
+                const error = await res.json();
+                toast.error(error.msg || "AI Generation failed");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to connect to AI service");
+        } finally {
+            setIsGeneratingAIQuiz(false);
+        }
     };
     const handleRemoveQuestion = (index) => {
         const newQuestions = quizForm.questions.filter((_, i) => i !== index);
@@ -775,10 +809,74 @@ const InstructorCourseDetails = () => {
                     {showQuizModal && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                             <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: '700px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                                    <h3 style={{ margin: 0 }}>{editingQuiz ? 'Edit Quiz' : 'Create Quiz'}</h3>
-                                    <button type="button" onClick={() => { setShowQuizModal(false); setEditingQuiz(null); setQuizForm({ title: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] }); }} style={{ background: 'none', border: 'none' }}><X size={24} /></button>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+                                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.25rem', fontWeight: 700 }}>
+                                        {editingQuiz ? <Edit size={24} color="#6366f1" /> : <PlusCircle size={24} color="#6366f1" />}
+                                        {editingQuiz ? 'Edit Quiz' : 'Create New Quiz'}
+                                    </h3>
+                                    <button type="button" onClick={() => { setShowQuizModal(false); setEditingQuiz(null); setQuizForm({ title: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={24} /></button>
                                 </div>
+
+                                {!editingQuiz && (
+                                    <div style={{ 
+                                        marginBottom: '2rem', 
+                                        padding: '1.5rem', 
+                                        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', 
+                                        borderRadius: '12px', 
+                                        color: 'white',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <div style={{ position: 'relative', zIndex: 1 }}>
+                                            <h4 style={{ margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                                                <Sparkles size={20} /> AI Quiz Generator
+                                            </h4>
+                                            <p style={{ margin: '0 0 1.25rem', fontSize: '0.85rem', opacity: 0.9 }}>
+                                                Upload a PDF study material, and I'll generate 10 professional MCQs for you instantly.
+                                            </p>
+                                            
+                                            <div style={{ position: 'relative' }}>
+                                                <input 
+                                                    type="file" 
+                                                    accept=".pdf" 
+                                                    onChange={handleGenerateAIQuiz}
+                                                    style={{ 
+                                                        position: 'absolute', 
+                                                        inset: 0, 
+                                                        opacity: 0, 
+                                                        cursor: 'pointer',
+                                                        zIndex: 2
+                                                    }}
+                                                    disabled={isGeneratingAIQuiz}
+                                                />
+                                                <div style={{ 
+                                                    background: 'rgba(255,255,255,0.2)', 
+                                                    border: '1px dashed rgba(255,255,255,0.4)',
+                                                    borderRadius: '8px',
+                                                    padding: '0.75rem',
+                                                    textAlign: 'center',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: 600,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.75rem',
+                                                    transition: 'all 0.2s'
+                                                }}>
+                                                    {isGeneratingAIQuiz ? (
+                                                        <><Loader2 size={20} className="spin" /> Reading PDF & Thinking...</>
+                                                    ) : (
+                                                        <><FileUp size={20} /> Upload PDF to Auto-Generate</>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* Background Decoration */}
+                                        <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', opacity: 0.2 }}>
+                                            <Sparkles size={100} />
+                                        </div>
+                                    </div>
+                                )}
                                 <form onSubmit={handleCreateQuiz}>
                                     <div style={{ marginBottom: '1.5rem' }}>
                                         <label style={labelStyle}>Quiz Title</label>

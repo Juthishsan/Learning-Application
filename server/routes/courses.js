@@ -4,6 +4,12 @@ const Course = require('../models/Course');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const { courseUpload, cloudinary } = require('../config/cloudinary');
+const { Groq } = require('groq-sdk');
+const pdfParse = require('pdf-parse');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 // Get all courses with student count
 router.get('/', async (req, res) => {
@@ -470,6 +476,143 @@ router.get('/:id/gradebook', async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/courses/:id/content/:contentId/transcribe
+// @desc    Generate AI transcript for a video using Groq Whisper
+router.post('/:id/content/:contentId/transcribe', async (req, res) => {
+    try {
+        if (!process.env.GROQ_API_KEY) {
+            console.warn("GROQ_API_KEY not found in .env. Falling back to Mock AI.");
+            // Keep fallback logic for testing without key
+            return res.json({
+                _id: req.params.contentId,
+                transcript: [
+                    { startTime: 0, endTime: 5, text: "AI Key missing! This is a mock transcript." },
+                    { startTime: 6, endTime: 15, text: "Please add GROQ_API_KEY to your .env to see real AI in action." }
+                ]
+            });
+        }
+
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const course = await Course.findById(req.params.id);
+        const contentItem = course.content.id(req.params.contentId);
+
+        if (!contentItem || contentItem.type !== 'video') {
+            return res.status(400).json({ msg: 'Invalid video content' });
+        }
+
+        // 1. Download video to temp file (Groq SDK requires a file stream/readable)
+        const tempPath = path.join(os.tmpdir(), `transcribe-${req.params.contentId}.mp4`);
+        const response = await axios({
+            method: 'get',
+            url: contentItem.url,
+            responseType: 'stream'
+        });
+
+        const writer = fs.createWriteStream(tempPath);
+        response.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+
+        // 2. Call Groq Whisper API
+        const transcription = await groq.audio.transcriptions.create({
+            file: fs.createReadStream(tempPath),
+            model: "whisper-large-v3",
+            response_format: "verbose_json", // This provides timestamps!
+        });
+
+        // 3. Process segments into our format
+        const formattedTranscript = transcription.segments.map(seg => ({
+            startTime: Math.floor(seg.start),
+            endTime: Math.floor(seg.end),
+            text: seg.text.trim()
+        }));
+
+        // 4. Cleanup and Save
+        fs.unlinkSync(tempPath);
+        contentItem.transcript = formattedTranscript;
+        await course.save();
+
+        res.json(contentItem);
+    } catch (err) {
+        console.error("Transcription Error:", err.message);
+        res.status(500).json({ msg: 'AI Processing Failed', error: err.message });
+    }
+});
+
+// @route   POST api/courses/:id/quizzes/generate
+// @desc    Auto-generate quiz from PDF using AI
+router.post('/:id/quizzes/generate', courseUpload.single('file'), async (req, res) => {
+    try {
+        if (!process.env.GROQ_API_KEY) {
+            return res.status(400).json({ msg: 'GROQ_API_KEY missing in server .env' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ msg: 'No PDF file uploaded' });
+        }
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        
+        // 1. Fetch the PDF buffer content
+        const pdfResponse = await axios.get(req.file.path, { responseType: 'arraybuffer' });
+        const pdfBuffer = Buffer.from(pdfResponse.data);
+        
+        // 2. Extract text from PDF
+        const pdfData = await pdfParse(pdfBuffer);
+        const extractedText = pdfData.text.substring(0, 15000); // Limit to 15k chars for prompt safety
+
+        if (!extractedText.trim()) {
+            return res.status(400).json({ msg: 'Could not extract text from the PDF' });
+        }
+
+        // 3. Prompt Groq for Quiz Generation
+        const prompt = `
+            You are an expert educator. Based on the following educational content, generate a high-quality quiz with exactly 10 multiple-choice questions.
+            
+            Return ONLY a valid JSON array of objects with this structure:
+            [
+              {
+                "question": "The question text",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correctAnswer": 0 // Index of the correct option
+              }
+            ]
+
+            CONTENT:
+            ${extractedText}
+        `;
+
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.5,
+            response_format: { type: "json_object" } // Ensure JSON output
+        });
+
+        const aiResponse = completion.choices[0].message.content;
+        
+        // Groq sometimes wraps JSON in a key like "quiz" or just returns the array.
+        // We'll parse it and extract the array.
+        let quizData = JSON.parse(aiResponse);
+        if (quizData.quiz) quizData = quizData.quiz;
+        if (!Array.isArray(quizData)) {
+            // Handle cases where it's wrapped in another object
+            const keys = Object.keys(quizData);
+            if (keys.length > 0 && Array.isArray(quizData[keys[0]])) {
+                quizData = quizData[keys[0]];
+            }
+        }
+
+        res.json(quizData);
+
+    } catch (err) {
+        console.error("AI Quiz Generation Error:", err.message);
+        res.status(500).json({ msg: 'AI Quiz Generation Failed', error: err.message });
     }
 });
 

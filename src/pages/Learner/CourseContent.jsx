@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { PlayCircle, FileText, CheckCircle, ChevronLeft, Menu, Lock, Download, ChevronRight, Video, File, HelpCircle, Check, X as XIcon, RefreshCw, Trophy, ArrowRight, Clock, AlertCircle, Calendar } from 'lucide-react';
+import { PlayCircle, FileText, CheckCircle, ChevronLeft, Menu, Lock, Download, ChevronRight, Video, File, HelpCircle, Check, X as XIcon, RefreshCw, Trophy, ArrowRight, Clock, AlertCircle, Calendar, Search, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CustomVideoPlayer from '../../components/Learner/CustomVideoPlayer';
 
@@ -51,6 +51,85 @@ const CourseContent = () => {
 
     const user = JSON.parse(localStorage.getItem('user'));
     const [mixedContent, setMixedContent] = useState([]);
+    
+    // AI Smart Search States
+    const [videoInfoTab, setVideoInfoTab] = useState('overview'); // overview, notes, resources, search
+    const [searchTerm, setSearchTerm] = useState('');
+    const [videoSeek, setVideoSeek] = useState(0);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [currentVideoTime, setCurrentVideoTime] = useState(0);
+    const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+    const [activeSegIndex, setActiveSegIndex] = useState(-1);
+    const [scrollProgress, setScrollProgress] = useState(0); // 0 to 1
+    const [isPinned, setIsPinned] = useState(false);
+    
+    // Refs for sticky player
+    const scrollContainerRef = useRef(null);
+    const videoWrapperRef = useRef(null);
+
+    // Handle Fluid Video Morphing on Scroll
+    useEffect(() => {
+        const handleScroll = () => {
+            if (!scrollContainerRef.current || activeContent?.type !== 'video') {
+                setScrollProgress(0);
+                setIsPinned(false);
+                return;
+            }
+            
+            const scrollTop = scrollContainerRef.current.scrollTop;
+            const startHeight = 600;
+            const minHeight = 210;
+            const transitionDistance = startHeight - minHeight; // 390px
+            
+            // Calculate progress (0 to 1) perfectly mapped to height reduction
+            const progress = Math.min(1, Math.max(0, scrollTop / transitionDistance));
+            setScrollProgress(progress);
+            
+            // Final pinning state: when the player has fully morphed to its mini-size
+            setIsPinned(progress >= 1);
+        };
+
+        const container = scrollContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', handleScroll, { passive: true });
+        }
+        return () => {
+            if (container) {
+                container.removeEventListener('scroll', handleScroll);
+            }
+        };
+    }, [activeContent?.type]);
+
+    // Reset scroll on content change
+    useEffect(() => {
+        setScrollProgress(0);
+        setIsPinned(false);
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+        }
+    }, [activeContent]);
+
+    // Update active segment index
+    useEffect(() => {
+        if (!activeContent?.transcript) return;
+        const index = activeContent.transcript.findIndex((seg, idx) => {
+            const nextSeg = activeContent.transcript[idx + 1];
+            return currentVideoTime >= seg.startTime && (!nextSeg || currentVideoTime < nextSeg.startTime);
+        });
+        if (index !== -1 && index !== activeSegIndex) {
+            setActiveSegIndex(index);
+        }
+    }, [currentVideoTime, activeContent?.transcript, activeSegIndex]);
+
+    // Auto-scroll transcript to active segment ONLY when it changes
+    useEffect(() => {
+        if (isAutoScrollEnabled && videoInfoTab === 'search' && !searchTerm) {
+            const activeElement = document.querySelector('[data-active-transcript="true"]');
+            if (activeElement) {
+                activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [activeSegIndex, videoInfoTab, searchTerm, isAutoScrollEnabled]);
 
     useEffect(() => {
         const fetchCourseAndCheckEnrollment = async () => {
@@ -324,6 +403,71 @@ const CourseContent = () => {
 
     const isCurrentContextCompleted = completedContent.includes(activeContent?._id);
 
+    // Smart Search Logic
+    const handleTranscribe = async () => {
+        setIsTranscribing(true);
+        try {
+            // In a real app, this would call a backend AI service (e.g. Groq/AssemblyAI)
+            // For now, we'll simulate the AI processing and provide a sample transcript
+            // if one doesn't exist on the content object.
+            
+            const res = await fetch(`http://localhost:5000/api/courses/${id}/content/${activeContent._id}/transcribe`, {
+                method: 'POST'
+            });
+            
+            if (res.ok) {
+                const updatedContent = await res.json();
+                // Update the active content and course state with the new transcript
+                const newCourse = { ...course };
+                const contentIdx = newCourse.content.findIndex(c => c._id === activeContent._id);
+                if (contentIdx !== -1) {
+                    newCourse.content[contentIdx].transcript = updatedContent.transcript;
+                    setCourse(newCourse);
+                    setActiveContent({ ...activeContent, transcript: updatedContent.transcript });
+                }
+                toast.success("AI Transcription Complete!");
+            } else {
+                toast.error("Transcription failed or service unavailable");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to reach AI service");
+        } finally {
+            setIsTranscribing(false);
+        }
+    };
+
+    const searchTranscript = () => {
+        if (!searchTerm || !activeContent.transcript) return [];
+        return activeContent.transcript.filter(s => 
+            s.text.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    };
+
+    const jumpToTime = (time) => {
+        setVideoSeek(time + Math.random() * 0.001); // Force effect trigger
+    };
+
+    // Group transcript into ~45s blocks for Coursera-style reading
+    const getGroupedTranscript = () => {
+        if (!activeContent?.transcript) return [];
+        
+        const groups = [];
+        let currentGroup = { startTime: activeContent.transcript[0].startTime, segments: [] };
+        
+        activeContent.transcript.forEach((seg) => {
+            // Group every 45 seconds or if a sentence is reasonably long
+            if (seg.startTime >= currentGroup.startTime + 45 && currentGroup.segments.length > 0) {
+                groups.push(currentGroup);
+                currentGroup = { startTime: seg.startTime, segments: [] };
+            }
+            currentGroup.segments.push(seg);
+        });
+        
+        if (currentGroup.segments.length > 0) groups.push(currentGroup);
+        return groups;
+    };
+
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'white', fontFamily: "'Inter', sans-serif", paddingTop: '80px', boxSizing: 'border-box' }}>
             
@@ -568,8 +712,10 @@ const CourseContent = () => {
                 </div>
 
                 {/* Viewer */}
-                <div style={{ flex: 1, overflowY: isScrollablePage ? 'auto' : 'hidden', background: activeContent?.type === 'video' ? 'white' : (activeContent?.type === 'assignment' || activeContent?.type === 'quiz' ? '#f8fafc' : '#2d2f31') }}> 
-                    
+                <div 
+                    ref={scrollContainerRef}
+                    style={{ flex: 1, overflowY: isScrollablePage ? 'auto' : 'hidden', background: activeContent?.type === 'video' ? 'white' : (activeContent?.type === 'assignment' || activeContent?.type === 'quiz' ? '#f8fafc' : '#2d2f31'), position: 'relative' }}
+                > 
                     <div style={{ maxWidth: '100%', minHeight: isScrollablePage ? '100%' : 'auto', height: isScrollablePage ? 'auto' : '100%', display: 'flex', flexDirection: 'column' }}>
                         
                         {activeContent?.type === 'assignment' || activeContent?.type === 'quiz' ? (
@@ -926,21 +1072,63 @@ const CourseContent = () => {
                                 {/* Ensure inner content takes full height for PDF/Video */}
                                 {activeContent.type === 'video' ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', height: 'auto', minHeight: '100%' }}>
-                                        {/* Video Theater Mode Container */}
-                                        <div style={{ width: '100%', background: 'black', padding: '1rem 0', display: 'flex', justifyContent: 'center' }}>
-                                            <div style={{ width: '100%', maxWidth: '1100px', aspectRatio: '16/9', position: 'relative' }}>
+                                        {/* Video Morphing Container */}
+                                        <div style={{ 
+                                            position: 'sticky',
+                                            top: 0,
+                                            width: '100%',
+                                            background: 'black',
+                                            padding: `${2 - (1.5 * scrollProgress)}rem 0`,
+                                            height: `${600 - (390 * scrollProgress)}px`,
+                                            display: 'flex', 
+                                            justifyContent: 'center',
+                                            zIndex: 100,
+                                            boxShadow: isPinned ? '0 10px 40px rgba(0,0,0,0.6)' : 'none',
+                                            transition: 'padding 0.05s ease, height 0.05s ease, box-shadow 0.3s ease',
+                                            overflow: 'hidden',
+                                            borderBottom: isPinned ? '1px solid #334155' : 'none'
+                                        }}>
+                                            <div style={{ 
+                                                width: '100%', 
+                                                maxWidth: `${1100 - (300 * scrollProgress)}px`, 
+                                                aspectRatio: '16/9', 
+                                                height: 'auto',
+                                                position: 'relative',
+                                                transform: `scale(${1 - (0.05 * scrollProgress)})`,
+                                                transition: 'all 0.05s ease',
+                                                transformOrigin: 'top center'
+                                            }}>
                                                 <CustomVideoPlayer 
                                                     src={activeContent.url} 
                                                     title={activeContent.title}
+                                                    seekTo={videoSeek}
+                                                    onTimeUpdate={(time) => setCurrentVideoTime(time)}
                                                 />
                                             </div>
                                         </div>
 
+                                        {/* Layout Sync Spacer - Keeps text attached to video bottom during transition */}
+                                        <div style={{ 
+                                            height: `${390 * scrollProgress}px`, 
+                                            width: '100%',
+                                            pointerEvents: 'none',
+                                            visibility: 'hidden'
+                                        }} />
+
                                         {/* Video Info Section */}
-                                        <div style={{ maxWidth: '1100px', margin: '0 auto', width: '100%', padding: '2rem' }}>
+                                        <div style={{ maxWidth: '1100px', margin: '0 auto', width: '100%', padding: '2rem', position: 'relative', zIndex: 10 }}>
                                             <div style={{ borderBottom: '1px solid #e2e8f0', marginBottom: '1.5rem', display: 'flex', gap: '2rem' }}>
-                                                <button style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', borderBottom: '2px solid #2563eb', color: '#2563eb', fontWeight: 600, cursor: 'pointer' }}>
+                                                <button 
+                                                    onClick={() => setVideoInfoTab('overview')}
+                                                    style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', borderBottom: videoInfoTab === 'overview' ? '2px solid #2563eb' : '2px solid transparent', color: videoInfoTab === 'overview' ? '#2563eb' : '#64748b', fontWeight: 600, cursor: 'pointer' }}
+                                                >
                                                     Overview
+                                                </button>
+                                                <button 
+                                                    onClick={() => setVideoInfoTab('search')}
+                                                    style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', borderBottom: videoInfoTab === 'search' ? '2px solid #2563eb' : '2px solid transparent', color: videoInfoTab === 'search' ? '#2563eb' : '#64748b', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                >
+                                                    <Search size={16} /> Smart Search
                                                 </button>
                                                 <button style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>
                                                     Notes
@@ -965,12 +1153,152 @@ const CourseContent = () => {
                                                 <span>Last updated {new Date().toLocaleDateString()}</span>
                                             </div>
 
-                                            <div style={{ lineHeight: '1.7', color: '#475569', fontSize: '1rem' }}>
-                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>About this lesson</h3>
-                                                <p>
-                                                    {activeContent.description || 'In this lesson, you will learn the fundamental concepts and practical applications. Make sure to take notes and review the attached resources.'}
-                                                </p>
-                                            </div>
+                                            {videoInfoTab === 'overview' && (
+                                                <div style={{ lineHeight: '1.7', color: '#475569', fontSize: '1rem' }}>
+                                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>About this lesson</h3>
+                                                    <p>
+                                                        {activeContent.description || 'In this lesson, you will learn the fundamental concepts and practical applications. Make sure to take notes and review the attached resources.'}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {videoInfoTab === 'search' && (
+                                                <div style={{ animation: 'fadeIn 0.3s' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                                                        <div>
+                                                            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Transcript</h3>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Language: </span>
+                                                                <select style={{ border: 'none', background: 'none', color: '#2563eb', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', outline: 'none' }}>
+                                                                    <option>English</option>
+                                                                </select>
+                                                                <span style={{ fontSize: '0.85rem', color: '#e2e8f0', margin: '0 0.5rem' }}>|</span>
+                                                                <button 
+                                                                    onClick={() => setIsAutoScrollEnabled(!isAutoScrollEnabled)}
+                                                                    style={{ background: 'none', border: 'none', color: isAutoScrollEnabled ? '#2563eb' : '#64748b', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                                                >
+                                                                    <div style={{ width: '32px', height: '18px', background: isAutoScrollEnabled ? '#2563eb' : '#cbd5e1', borderRadius: '20px', position: 'relative', transition: 'all 0.3s' }}>
+                                                                        <div style={{ position: 'absolute', top: '2px', left: isAutoScrollEnabled ? '16px' : '2px', width: '14px', height: '14px', background: 'white', borderRadius: '50%', transition: 'all 0.3s' }}></div>
+                                                                    </div>
+                                                                    Auto-scroll
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        {!activeContent.transcript ? (
+                                                            <button 
+                                                                onClick={handleTranscribe}
+                                                                disabled={isTranscribing}
+                                                                style={{ 
+                                                                    padding: '0.6rem 1.25rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
+                                                                }}
+                                                            >
+                                                                {isTranscribing ? <RefreshCw size={16} className="spin" /> : <Plus size={16} />}
+                                                                {isTranscribing ? 'Processing...' : 'Generate Transcript'}
+                                                            </button>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                                                <button style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>View Notes</button>
+                                                                <button style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Download PDF</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {!activeContent.transcript ? (
+                                                        <div style={{ padding: '3rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '2px dashed #e2e8f0' }}>
+                                                            <div style={{ width: '60px', height: '60px', background: '#eff6ff', borderRadius: '50%', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                                                                <FileText size={30} />
+                                                            </div>
+                                                            <p style={{ color: '#475569', margin: 0 }}>This video hasn't been transcribed yet.</p>
+                                                            <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.5rem' }}>Use AI to extract text and enable keyword searching.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                                            <div style={{ position: 'relative' }}>
+                                                                <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={18} />
+                                                                <input 
+                                                                    type="text" 
+                                                                    placeholder="Search keywords (e.g. 'State', 'Effect')..." 
+                                                                    value={searchTerm}
+                                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                                    style={{ 
+                                                                        width: '100%', 
+                                                                        padding: '0.75rem 1rem 0.75rem 2.5rem', 
+                                                                        borderRadius: '8px', 
+                                                                        border: '1px solid #e2e8f0', 
+                                                                        fontSize: '0.95rem',
+                                                                        outline: 'none',
+                                                                        boxSizing: 'border-box'
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                             <div style={{ maxHeight: '600px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem', background: '#fff', borderRadius: '12px' }} className="transcript-container">
+                                                                {searchTerm ? (
+                                                                    searchTranscript().length > 0 ? (
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                                            {searchTranscript().map((seg, idx) => (
+                                                                                <button 
+                                                                                    key={idx}
+                                                                                    onClick={() => jumpToTime(seg.startTime)}
+                                                                                    style={{ 
+                                                                                        textAlign: 'left', padding: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', gap: '1rem'
+                                                                                    }}
+                                                                                    className="hover:border-blue-300 hover:bg-blue-50"
+                                                                                >
+                                                                                    <span style={{ color: '#2563eb', fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                                                                                        {Math.floor(seg.startTime/60)}:{(seg.startTime%60).toString().padStart(2, '0')}
+                                                                                    </span>
+                                                                                    <span style={{ fontSize: '0.95rem', color: '#334155', lineHeight: '1.5' }}>
+                                                                                        {seg.text}
+                                                                                    </span>
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No matches found for "{searchTerm}"</p>
+                                                                    )
+                                                                ) : (
+                                                                    getGroupedTranscript().map((group, gIdx) => (
+                                                                        <div key={gIdx} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
+                                                                            <div style={{ position: 'sticky', top: '0', color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600, paddingTop: '4px' }}>
+                                                                                {Math.floor(group.startTime/60)}:{(group.startTime%60).toString().padStart(2, '0')}
+                                                                            </div>
+                                                                            <div style={{ lineHeight: '1.8', fontSize: '1.05rem', color: '#475569' }}>
+                                                                                {group.segments.map((seg, sIdx) => {
+                                                                                    const nextSeg = activeContent.transcript[activeContent.transcript.indexOf(seg) + 1];
+                                                                                    const isActive = currentVideoTime >= seg.startTime && (!nextSeg || currentVideoTime < nextSeg.startTime);
+                                                                                    
+                                                                                    return (
+                                                                                        <span 
+                                                                                            key={sIdx}
+                                                                                            onClick={() => jumpToTime(seg.startTime)}
+                                                                                            data-active-transcript={isActive}
+                                                                                            style={{ 
+                                                                                                cursor: 'pointer',
+                                                                                                padding: '2px 4px',
+                                                                                                borderRadius: '4px',
+                                                                                                background: isActive ? '#dbeafe' : 'transparent',
+                                                                                                color: isActive ? '#1e40af' : 'inherit',
+                                                                                                fontWeight: isActive ? 600 : 400,
+                                                                                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                                                                borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent'
+                                                                                            }}
+                                                                                            onMouseEnter={(e) => !isActive && (e.currentTarget.style.background = '#f1f5f9')}
+                                                                                            onMouseLeave={(e) => !isActive && (e.currentTarget.style.background = 'transparent')}
+                                                                                        >
+                                                                                            {seg.text}{' '}
+                                                                                        </span>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ) : isPdf ? (
@@ -1024,6 +1352,18 @@ const CourseContent = () => {
                 ::-webkit-scrollbar-track { background: #f1f5f9; }
                 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
                 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+                
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .spin {
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
             `}</style>
         </div>
     );
