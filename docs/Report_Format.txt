@@ -1,0 +1,481 @@
+FORMAT FOR PREPARATION  OF PROJECT REPORT 
+FOR 
+M.E/M. Tech /MCA/M.Sc/MBA 
+CONTENTS 
+1. GENERAL  
+2. NUMBER OF COPIES TO BE SUBMITTED  
+3. SIZE OF PROJECT REPORT  
+4. AR RANGEMENT OF CONTENTS OF PROJECT REPORT  
+5. PAGE DIMENSIONS AND MARGIN  
+6. MANUSCRIPT PREPARATION  
+7. TYPING INSTRUCTIONS  
+8. NUMBERING INSTRUCTI ONS  
+9. BINDING SPECIFICATIONS  
+Appendix 1 : M.E. / M.Tech. / MCA / M.Sc. / MBA Cover Page & Title Page 
+Appendix 2 : M.E. / M.Tech. / MCA / M.Sc. / MBA Bonafide Certificate 
+Appendix 3 : Declaration 
+Appendix 4 : Table of Contents 
+1. GENERAL : 
+The manual is intended to provide bro ad guidelines to the M.E./M.Tech./MCA/M.Sc. / MBA 
+candidates in the preparation of the project repo rt. In 
+general, the project report shall report, 
+in an organised and scholarly fashion an account of original research work of the candidate 
+leading to the discovery of new facts or techniques 
+or correlation o f facts already known 
+(analytical, experiments, hardware oriented etc.)    
+2. NUMBER OF COPIES TO BE SUBMITTED :    
+M.E. /M. Tech./ MCA/M. Sc./M.B.A.:Students should submit Three copies to the Head of 
+the Department concerned on or before the specified date.  The Head of the Department 
+should send   
+(i) One copy to the Department library ( ii) One copy 
+the student concerned.    
+3. SIZE OF PROJECT REPORT :    
+The size of project report should no t exceed 70 pages of 
+page of Chapter 1 to the last page.    
+4. ARRANGEMENT OF CONTENTS: 
+each to the internal (iii) One cop y to 
+typed matter reckoned from the first 
+The sequence in which the project report material should be arranged and bound should be as 
+follows: 
+1. Cover Page & Title Page  
+2. Bonafide Certificate  
+3. Declaration  
+4. Project Completion Letter  
+5. Acknowledgement  
+6. Table of Contents  
+7. Abstract  
+8. List of Table(If Necessary to the Project)  
+9. List of Figures  
+10. List of Symbols, Abbreviations and Nomenclature  
+11. Chapters  
+12. Appendices  
+13. References  
+The table and figures shall be introduced in the appropriate p laces. 
+5. PAGE DIMENSION AND BINDING SPECIFICATIONS: 
+The project report should be of A4 size. The project report should be bound using flexible 
+cover of thick white art paper. The cover should be printed in black letters and the text for 
+printing should be identical. 
+6. PREPARATION FORMAT: 
+6.1 Cover Page & Title Page – A specimen copy of the Cover page & Title page of the project report 
+are given in Appendix 1. 
+6.2 Bonafide Certificate – The Bonafide Certificate shall be in One and a half line spacing using 
+Font Style ‘Times New Roman’ and Font Size 13, as per the format in Appendix 2. 
+6.3 Declaration - Declaration to be given for the work done by the student as per the format in 
+Appendix 3. 
+6.4 Project Completion Letter – Letter from the Company to confirm the completion of the project 
+6.5 Acknowledgement 
+a half spacing.     
+6.6 Table of Contents – – It should be brief and should not exceed one page when typed one and 
+The table of contents should list all material following it as well as any 
+material which precedes it. The title page, Bonafide Certificate and Declaration will not find 
+a place among the items listed in the Table o f 
+Contents: The page number s for the abstract, 
+list o f tables, list of figures and list of symbols 
+should be in lower case Roman letter s. One 
+and a half spacing should be adopted for typing the matter under this head. A specimen copy 
+of the Table of Contents of the project report is given in Appendix 4.   
+6.7 Abstract – 
+Abstract should be one page synopsis o f the project report typed 
+line spacing, Font Style Times New Roman and Font Size 13.   
+One and a half 
+6.8 List of Tables – The list should use exactly the same captions as they appear above the tables in the 
+text. One and a half spacing should be adopted for typing the matter under this head. 
+6.9 List of Figures – The list should use exactly the same captions as they appear below the figures in 
+the text. One and a half spacing should be adopted for typing the matter under this head. 
+6.10 List of Symbols, Abbreviations and Nomenclature – One and a half spacing should be 
+adopted for typing the matter under this head. Standard symbols, abbreviations etc. should be  
+used.      
+6.11 Chapters – The chapters may be broadly divided into 
+Chapters developing the main theme of the project work 
+3 parts (i) Introductory chapter, 
+(ii) 
+(iii) Conclusion and (iv) Scope for 
+the future work.      
+• The main text will be divided into several chapters and 
+into several divisions and sub-divisions.      
+• Each chapter should be given an appropriate title.  
+each chapter may be further divided 
+• Tables and figures in a chapter should be placed in the immediate vicinity of the 
+reference where they are cited.  
+• Foot notes should be used sparingly. They should be typed single space and placed 
+directly underneath in the very same page, which refers to the material they annotate.  
+6.12 Appendices – Appendices are provided to give supplementary information, which is 
+included in the main text may serve as a distraction and cloud the central theme. 
+• Appendices should be number edusing Arabic numerals,e.g. Appendix 1, Appendix 2, 
+etc.  
+• Appendices, Tables and References appearing in appendices should be numbered and  
+referred to at appropriate places just as in the case of chapters. 
+•  Appendices shall carry the title o f the work reported and the same title shall be made 
+in the contents page also. 
+6.13 List of References –The listing of references should be typed 4 spaces below the heading 
+“REFERENCES” in alphabetical order in single spacing left – justified. The reference material 
+should be listed in the alphabetical order of the first author. The name of the author/authors 
+should be immediately followed by the year and other details. 
+The page Nos. for the abstract, list of table, list of figures and list of symbols should be in lower 
+case roman letter s. 
+A typical illustrative list given below relates to the citation example quoted above. 
+REFERENCES 
+1. Venkatraj, S. and rajan, S. (1994) ‘Transport Properties o f SmSel – X Asx’, Pramana  – Journal of Physics Vo l.42, No.1, pp.421-425.  
+2. Barnard, R.W. and Klogg, C. (1980) ‘Applications o f Convolutio n Operato rs to 
+Problems in Univalent Functio n Theory’, Michigan Mach, J., Vol.27, pp.81–94.  
+3. Leo , G.K. and Mike, N.D. (1984) ‘Closed Loop Minimum Time Co ntrol of Mechanical 
+Manipulations and its Applications’, Proc.Amer.Contr.Conf., San Diego, CA, pp. 
+1231-1236.  
+6.13.1 Table and figures - By the word Table, is meant tabulated numerical data in the body of the 
+project report as well as in the appendices. All other non-verbal materials used in the body of 
+the project work and appendices such as charts, graphs, maps, photo graphs and diagrams 
+may be designated as figures.  
+7 TYPING INSTRUCTIONS:  
+7.1 
+7.2. 
+General  
+This section includes additional information for final typing of the project report. Some 
+information given earlier under ‘Manuscript preparation’ shall also be referred.  
+The impressions on the typed copies should be black in colour.  
+“The font and size : ‘12 point TimesNewRoman’ with bold letters wherever 
+necessary shall be used to have uniformity of the project report”.  
+A sub-heading at the bottom of a page must have atleast two full lines below it or else 
+it should be carried over to the next page.  
+The last word of any page should not be split using a hyphen. 
+One and a half spacing should be used for typing the general text. 
+Single spacing should be used for typing:  
+(i) Long Tables  
+(ii) Long quotations  
+(iii) Foot notes  
+(iv) Multiline captions  
+(v) References  
+All quotations exceeding one line should be typed in an indented space – the 
+indentation being 15 mm from either margins. 
+One and a half spacing should be used for typing the Bonafide Certificate and 
+Acknowledgement. 
+Chapters  
+The format for typing chapter headings, divisions headings and subdivision headings 
+are explained through the following illustrative examples.  
+Chapter heading : CHAPTER 1 
+Division heading 
+Division heading 
+INTRODUCTION 
+: 1.1 OUTLINE OF PROJECT REPORT 
+Sub- division heading : 1.1. 2. Literature review. 
+The word CHAPTER without punctuation should be centered 50mm down from the top of 
+the page. Two spaces below, the title o f the chapter should be typed centrally in capital 
+letters. The text should commence 4 spaces below this title, the first letter of the text 
+starting 20 mm, inside from the left hand margin. 
+The division and sub-division captions along with their numberings should be left
+justified. The typed material directly below division or sub-division heading should 
+commence 2 spaces below it and should be offset 20mm from the left hand margin. Within 
+a division or sub-division, paragraphs are permitted. Even paragraph should commence 3 
+spaces below the last line of the preceding paragraph, the first letter in the paragraph being 
+offset from the left hand margin by 20mm. 
+8. NUMBERING INSTRUCTIONS 
+8.1. 
+8.2 
+8.3 
+Page Numbering  
+All pages numbers (whether it is in Roman or Arabic numbers) should be typed 
+without punctuation on the upper right hand corner 20mm from top with the last digit 
+in line with the right hand margin. The preliminary pages of the project report (such 
+as Title page, Acknowledgement, Table o f Contents etc.) should be numbered in lower 
+case Roman numerals. The title page will be numbered as ( i) but this should not be typed. 
+The page immediately following the title page shall be numbered (ii) and it should appear 
+at the top right hand corner as already specified. Pages of main text, starting with Chapter 
+1 should be consecutively numbered using Arabic numerals. 
+Numbering of Chapters, Divisions and Sub-Divisions  
+The numbering of chapters, divisions and sub-divisions should be done, using Arabic 
+numerals only and further decimal notation should be used for numbering the divisions 
+and sub-divisions within a chapter. For example, sub- division 4 under division 3 
+belonging to chapter 2 should be numbered as 2.3.4. The caption for the sub-division 
+should immediately follow the number assigned to it.  
+Ever y chapter beginning with the first chapter should be serially numbered using 
+Arabic numerals. Appendices included should also be numbered in an identical manner 
+starting with Appendix 1.  
+Numbering of Tables and Figures  
+Tables and Figures appearing anywhere in the project report should bear appropriate numbers. The 
+rule for assigning such numbers is illustrated thro ugh an example. Thus if as figure in Chapter 3, 
+happens to be the fourth then assign 3.4 to that figure. Identical rules 
+apply for tables except that the word Figures is rep laced by the word 
+Table. If figures (or 
+tables) appear in appendices then figure 3 in Appendix 2 will be designated as 
+If a table to be continued into the next page this may be done, but no 
+underneath an unfinished table. The topline of the table continued into the 
+for example read Table 2. 1 (continued) placed centrally and underlined.    
+8.4 
+Numbering of Equations  
+Figure A 2.3. 
+line should be drawn 
+next page should, 
+Equations appearing in each Chapter or Appendix should be numbered serially, the 
+numbering commencing a fresh for each Chapter or Appendix. Thus for example, an 
+equation appearing in Chapter 2, if it happens to be the eighth equation in that Chapter 
+should be numbered (2.8) thus:  
+C(s) -----   = 
+R(s) 
+G  G
+1
+ ----------------
+2 
+(2.8) 
+1  +G1 G2 H 
+While referring to this equation in the body of the project report it should be referred to 
+as Equation ( 2.8). 
+9. BINDING SPECIFICATIONS 
+Project report submitted for M.E./M.Tech./MCA/ M.Sc./MBA should be bound using 
+flexible cover o f thick white art paper. The spine for the bound volume should be of black Calico 
+of 20 mm width. The cover should be printed in black letters and the text for printing should be 
+identical to what has been prescribed for the title page. 
+* * * * * 
+ 
+ APPENDIX 1 
+ 
+Anna (A typical Specimen of Cover Page & Title Page) 
+ 
+University <Font Style Times New Roman – Bold> 
+ 
+Emblem 
+TITLE OF PROJECT REPORT  
+ 
+ 
+ <Font Size 18 Bo ld><1.5 line spacing> 
+ 
+ PROJECT REPORT 
+ 
+ <Font Size 14 bold> 
+ 
+ Submitted by 
+ 
+ <Font Size 14 bold><Italic> 
+ 
+ NAME OF THE CANDIDATE(S) 
+ 
+ Register No: 
+ 
+ <Font Size 16 bold> 
+ 
+ in partial fulfillment for the award of the degree 
+ 
+ of 
+ 
+ <Font Size 14 ><1.5 line spacing><Italic> 
+ 
+ M. E/M.Tech/M.C.A/M.Sc 
+ 
+ <Font Size 16 bold> 
+ 
+ IN 
+ 
+ Name o f the Department 
+ 
+ <Font Size 14> 
+ 
+ Name of the Institution 
+ 
+ <Font Size 16><1.5 line spacing > 
+ 
+ MONTH & YEAR 
+ 
+ <Font Size 14> 
+ 
+   
+ 
+College  
+Emblem 
+SPECIMEN 
+ 
+                                  
+                                            WHITE BOARD DEVELOPMENT 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+PROJECT REPORT 
+   
+ 
+Submitted by 
+   
+ 
+S.DINESHKUMAR 
+  
+ 
+Register No: 24MCA00 
+      
+ 
+in partial fulfillment for the award of the degree 
+   
+of 
+   
+ 
+MASTER OF COMPUTER APPLICATIONS 
+  
+ 
+in 
+      
+ 
+COMPUTER APPLICATIONS 
+       
+ 
+KUMARAGURU COLLEGE OF TECHNOLOGY  
+(An Autonomous Institution Affiliated to Anna University, Chennai) 
+    
+ 
+April 2026
+APPENDIX 2  
+(A typical specimen o f Bonafide Certificate) 
+<Font Style Times New Roman> 
+ 
+Name of the Institution 
+ 
+ 
+<Font Size -18> 
+ 
+Name of the Department 
+ 
+<Font style Times New Roman –size -14> 
+  
+ 
+PROJECT WORK 
+    
+ 
+APRIL 2026 
+<Font Style Times New Roman – size -12> 
+ 
+This is to certify that the project entitled 
+ 
+TITLE OF PROJECT REPORT 
+ 
+<Fo nt Style Times New Roman – size -16 1.5 LINE SPACING> 
+ 
+ 
+is the bonafide record of project work done by 
+  
+NAME OF THE CANDIDATE 
+ 
+ 
+Register No :  
+<Font Size 14 bold> 
+ 
+of _________(M.E./M.Tech/MCA/M.Sc./MBA) during the year 2019-2020. 
+ 
+ 
+ 
+ ------------------------ ---------------------------  
+Project Guide Head of the Department  
+<Font Times new roman –size14 bold> <Font Times new roman –size14 bold> 
+     
+ 
+Submitted for the Project Viva-Voce examination held on _______________ 
+   
+ ----------------------------- ------- --- --- --- ---- --- -----  
+Internal Examiner External Examiner 
+KUMARAGURU COLLEGE OF TECHNOLOGY  
+An Autonomous Institution Affiliated to Anna University, Chennai) 
+COIMBATORE -641 049 
+ 
+ 
+Department of Computer Applications 
+    
+PROJECT WORK 
+      
+ 
+APRIL 2026 
+  
+ 
+This is to certify that the project entitled 
+ 
+WHITE BOARD DEVELOPMENT 
+ 
+ 
+is the bonafide record of project work done by 
+      
+ 
+S.DINESHKUMAR 
+ 
+Register No: 24MCA00 
+ 
+ 
+ 
+of MCA. (Computer Applications) during the year 2015-2016. 
+          
+ --------------------- ----------------------------------  
+  
+Project Guide Head of the Department 
+ 
+Submitted for the Project Viva-Voce examination held on  
+ 
+        
+ --------------------------- ------- --- --- --- --- --- --- ---  
+Internal Examiner External Examiner 
+APPENDIX 3 
+DECLARATION 
+I 
+affirm that the project work titled……………………. being submitted in partial 
+fulfillment for the award of ……………………………. (M.E/M.Tech/MCA/MBA/M.Sc.) is the 
+original work carried out by me. It has not formed the par t of any other project work submitted for 
+award o f any degree or diploma, either in this or any other University. 
+I certify that the declaration made above by the candidate is true 
+(Signature of the Candidate) 
+Name of the Candidate 
+Register Number 
+Signature of the Guide, 
+With Name & Designation 
+APPENDIX 4 
+(A typical specimen o f table of contents) 
+<Font Style Times New Roman> 
+CHAPTER NO. 
+Abstract 
+List of Tables 
+List of Figures 
+TITLE 
+List of Abbreviations 
+1 Introduction  
+1.1 Company Profile  
+1.2 Objective 
+2 System Analysis  
+2.1 Existing System  
+2.1.1 Drawbacks  
+2.2 Proposed System  
+2.3 Feasibility Study  
+2.3.1 Economical Feasibility  
+2.3.2 Operational Feasibility  
+2.3.3 Technical Feasibility  
+3  System Specification 
+3.1 Hardware Requirements  
+3.2 Software Requirements  
+4 Software Description  
+4.1 Front End  
+4.2 Features 
+5 Project Description  
+5.1 Problem Definition  
+5.2 Overview o f the Project  
+5.3 Module Description  
+5.3.1 Modules  
+5.4 Data Flow Diagram  
+5.5 E-R Diagram  
+5.6 Database Design  
+5.6.1 Table 1  
+5.6.2 Table 2  
+5.7 Input Design  
+5.8 Output Design  
+6 System Testing  
+6.1 Unit Testing  
+6.2 Acceptance Testing  
+6.3 Test Cases  
+PAGE NO. 
+7  System Implementation 
+8  Conclusion & Future Enhancements 
+8.1 Conclusion  
+8.2 Future Enhancements  
+9 Appendix  
+9.1 Source Code  
+9.2 Screen Shots  
+10  References 
+*NOTE: 
+• THIS DOCUMENT IS THE FORMAT OF SPECIMEN COPY ONLY  
+• THE CONTENTS ARE DIFFERED BASED ON MODE OF THE PROJECT  
+• INCLUDE OR EXCLUDE THE CONTENTS BASED ON YOUR PROJECT  
+• MAKE SURE ALL THE CONTENTS ARE COVERED REGARDING YOUR PROJECT 
+WHILE PREPARING THE REPORT  
+• FOR FURTHER DETAILS CONTACT YOUR GUIDE  
