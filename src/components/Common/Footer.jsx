@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BookOpen, Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, Heart } from 'lucide-react';
+import Logo from '../../assets/EroSkillupAcademy.jpg';
 
 const Footer = () => {
     return (
@@ -9,9 +10,9 @@ const Footer = () => {
                     
                     {/* Brand Section */}
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '1.5rem', color: 'white', marginBottom: '1.5rem' }}>
-                            <div style={{ background: 'var(--primary)', padding: '6px', borderRadius: '8px', color: 'white', display: 'flex' }}>
-                                <BookOpen size={24} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 700, fontSize: '1.5rem', color: 'white', marginBottom: '1.5rem' }}>
+                            <div style={{ background: 'white', padding: '4px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '48px', width: '48px', overflow: 'hidden' }}>
+                                <img src={Logo} alt="EroSkillUp Academy Logo" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                             </div>
                             <span>Ero<span className="text-gradient">SkillUp</span></span>
                         </div>

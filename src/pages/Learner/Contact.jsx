@@ -76,7 +76,7 @@ const Contact = () => {
                         transition={{ duration: 0.6 }}
                     >
                         <h1 style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>Get in Touch</h1>
-                        <p style={{ fontSize: '1.25rem', color: '#cbd5e1', maxWidth: '600px', margin: '0 auto' }}>
+                        <p style={{ fontSize: '1.25rem', color: '#cbd5e1' }}>
                             Have questions about our courses or need career guidance? We're here to help you every step of the way.
                         </p>
                     </motion.div>

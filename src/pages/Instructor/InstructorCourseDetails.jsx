@@ -4,7 +4,7 @@ import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
 import { 
     LayoutDashboard, FileText, Video, ClipboardList, GraduationCap, Users, 
     Plus, Trash2, Search, ArrowLeft, MoreVertical, Edit, Upload, Download,
-    CheckCircle, X, Check, HelpCircle, PlusCircle, Clock, Loader2, Sparkles, FileUp
+    CheckCircle, X, Check, HelpCircle, PlusCircle, Clock, Loader2, Sparkles, FileUp, Square, CheckSquare, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -33,6 +33,17 @@ const InstructorCourseDetails = () => {
     const [contentType, setContentType] = useState('pdf');
     const [editingContent, setEditingContent] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    
+    // AI Syllabus Builder State
+    const [showSyllabusModal, setShowSyllabusModal] = useState(false);
+    const [syllabusStep, setSyllabusStep] = useState('input'); // 'input' or 'review'
+    const [syllabusTopic, setSyllabusTopic] = useState('');
+    const [generatedSyllabus, setGeneratedSyllabus] = useState([]);
+    const [isGeneratingSyllabus, setIsGeneratingSyllabus] = useState(false);
+    const [isSavingSyllabus, setIsSavingSyllabus] = useState(false);
+    
+    // Bulk Delete State
+    const [selectedContents, setSelectedContents] = useState([]);
 
     // Assessment State
     const [assessmentTab, setAssessmentTab] = useState('assignments'); // assignments, quizzes
@@ -70,6 +81,7 @@ const InstructorCourseDetails = () => {
     }, [id]);
 
     const [viewingAssessment, setViewingAssessment] = useState(null);
+    const [viewingContentDetails, setViewingContentDetails] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'gradebook') {
@@ -158,10 +170,59 @@ const InstructorCourseDetails = () => {
                 const updatedContent = await res.json();
                 setCourse({ ...course, content: updatedContent });
                 toast.success('Content deleted');
+                // Remove from selected list if it was selected
+                setSelectedContents(prev => prev.filter(id => id !== contentId));
             }
         } catch (err) {
             console.error(err);
             toast.error('Delete failed');
+        }
+    };
+
+    const handleSelectAllContent = (e) => {
+        if (e.target.checked) {
+            setSelectedContents(course?.content?.map(item => item._id) || []);
+        } else {
+            setSelectedContents([]);
+        }
+    };
+
+    const handleSelectContent = (id) => {
+        if (selectedContents.includes(id)) {
+            setSelectedContents(selectedContents.filter(item => item !== id));
+        } else {
+            setSelectedContents([...selectedContents, id]);
+        }
+    };
+
+    const handleBulkDeleteContent = () => {
+        if (selectedContents.length === 0) return;
+        openConfirmModal('bulk-content', null);
+    };
+
+    const performDeleteBulkContent = async () => {
+        setIsSavingSyllabus(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/courses/${id}/content/bulk-delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contentIds: selectedContents }),
+            });
+
+            if (res.ok) {
+                const updatedContent = await res.json();
+                setCourse({ ...course, content: updatedContent });
+                setSelectedContents([]);
+                toast.success(`${selectedContents.length} items deleted successfully`);
+                closeConfirmModal();
+            } else {
+                toast.error('Failed to perform bulk deletion');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error('Bulk delete error');
+        } finally {
+            setIsSavingSyllabus(false);
         }
     };
 
@@ -203,6 +264,76 @@ const InstructorCourseDetails = () => {
             toast.error('Update error');
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleGenerateSyllabus = async (e) => {
+        e.preventDefault();
+        setIsGeneratingSyllabus(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/courses/${id}/generate-syllabus-preview`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: syllabusTopic || course?.title })
+            });
+
+            if (res.ok) {
+                const previewSyllabus = await res.json();
+                setGeneratedSyllabus(previewSyllabus);
+                setSyllabusStep('review');
+                toast.success('Course syllabus generated! Please review it.');
+            } else {
+                toast.error('Failed to generate syllabus.');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error('Server error generating syllabus.');
+        } finally {
+            setIsGeneratingSyllabus(false);
+        }
+    };
+
+    const handleUpdateSyllabusItem = (index, field, value) => {
+        const updated = [...generatedSyllabus];
+        updated[index] = { ...updated[index], [field]: value };
+        setGeneratedSyllabus(updated);
+    };
+
+    const handleRemoveSyllabusItem = (index) => {
+        const updated = generatedSyllabus.filter((_, i) => i !== index);
+        setGeneratedSyllabus(updated);
+    };
+
+    const handleSaveSyllabus = async () => {
+        if (generatedSyllabus.length === 0) {
+            toast.error("Syllabus is empty");
+            return;
+        }
+
+        setIsSavingSyllabus(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/courses/${id}/save-syllabus`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ modules: generatedSyllabus })
+            });
+
+            if (res.ok) {
+                const updatedContent = await res.json();
+                setCourse({ ...course, content: updatedContent });
+                toast.success('Syllabus successfully added to your course structure!');
+                setShowSyllabusModal(false);
+                setSyllabusStep('input');
+                setSyllabusTopic('');
+                setGeneratedSyllabus([]);
+            } else {
+                toast.error('Failed to save the syllabus.');
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error('Server error saving syllabus.');
+        } finally {
+            setIsSavingSyllabus(false);
         }
     };
 
@@ -390,12 +521,14 @@ const InstructorCourseDetails = () => {
         if (type === 'content') performDeleteContent(id);
         else if (type === 'assignment') performDeleteAssignment(id);
         else if (type === 'quiz') performDeleteQuiz(id);
-        closeConfirmModal();
+        else if (type === 'bulk-content') performDeleteBulkContent();
+        else closeConfirmModal();
     };
 
     const getConfirmMessage = () => {
         const { type } = confirmModalState;
         if (type === 'content') return 'Are you sure you want to permanently delete this content module from the course? This action cannot be undone.';
+        if (type === 'bulk-content') return `Are you sure you want to permanently delete these ${selectedContents.length} items? This action cannot be undone.`;
         if (type === 'assignment') return 'Are you sure you want to permanently delete this assignment? Student submissions may be affected.';
         if (type === 'quiz') return 'Are you sure you want to permanently delete this quiz? Student attempts may be affected.';
         return 'Are you sure you want to delete this item?';
@@ -488,30 +621,81 @@ const InstructorCourseDetails = () => {
                                         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Course Content</h2>
                                         <p style={{ color: 'var(--text-light)', marginTop: '0.25rem' }}>Manage your lessons and materials.</p>
                                     </div>
-                                    <button 
-                                        onClick={() => setShowUploadModal(true)}
-                                        className="btn btn-primary"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)' }}
-                                    >
-                                        <Plus size={20} /> Add Content
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button 
+                                            onClick={() => { setSyllabusTopic(course?.title || ''); setShowSyllabusModal(true); }}
+                                            className="btn"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.3)' }}
+                                            title="Auto-generate a complete syllabus structure using AI"
+                                        >
+                                            <Sparkles size={18} /> AI Structure Builder
+                                        </button>
+                                        <button 
+                                            onClick={() => setShowUploadModal(true)}
+                                            className="btn btn-primary"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)' }}
+                                        >
+                                            <Plus size={20} /> Add Content
+                                        </button>
+                                    </div>
                                 </div>
+
+                                {course?.content?.length > 0 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', background: 'var(--bg-card)', padding: '1rem 1.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px -2px rgba(0,0,0,0.02)' }}>
+                                        <div 
+                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+                                            onClick={() => handleSelectAllContent({ target: { checked: selectedContents.length !== course.content.length } })}
+                                        >
+                                            {selectedContents.length > 0 && selectedContents.length === course.content.length ? (
+                                                <CheckSquare size={20} color="#2563eb" fill="#eff6ff" style={{ transition: 'all 0.2s' }} />
+                                            ) : (
+                                                <Square size={20} color="#94a3b8" style={{ transition: 'all 0.2s' }} />
+                                            )}
+                                            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', userSelect: 'none' }}>Select All Modules</span>
+                                        </div>
+                                        
+                                        <AnimatePresence>
+                                            {selectedContents.length > 0 && (
+                                                <motion.div initial={{ opacity: 0, scale: 0.95, x: 10 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.95, x: 10 }}>
+                                                    <button 
+                                                        onClick={handleBulkDeleteContent}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(239, 68, 68, 0.1)' }}
+                                                    >
+                                                        <Trash2 size={16} /> Delete Selected ({selectedContents.length})
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     {course?.content?.length > 0 ? (
-                                        course.content.map(item => (
+                                        course.content.map((item, index) => (
                                             <motion.div 
                                                 key={item._id} 
                                                 initial={{ opacity: 0, y: 10 }} 
                                                 animate={{ opacity: 1, y: 0 }} 
+                                                transition={{ delay: index * 0.05 }}
                                                 className="card" 
                                                 style={{ 
-                                                    padding: '1.5rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid #e2e8f0', 
+                                                    padding: '1.5rem', background: selectedContents.includes(item._id) ? '#f8fafc' : 'var(--bg-card)', 
+                                                    borderRadius: '12px', border: selectedContents.includes(item._id) ? '1px solid #cbd5e1' : '1px solid #e2e8f0', 
                                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    boxShadow: '0 2px 4px -2px rgba(0,0,0,0.05)', transition: 'transform 0.2s'
+                                                    boxShadow: '0 2px 4px -2px rgba(0,0,0,0.05)', transition: 'all 0.2s'
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                                                    <div 
+                                                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                                                        onClick={() => handleSelectContent(item._id)}
+                                                    >
+                                                        {selectedContents.includes(item._id) ? (
+                                                            <CheckSquare size={20} color="#2563eb" fill="#eff6ff" />
+                                                        ) : (
+                                                            <Square size={20} color="#cbd5e1" />
+                                                        )}
+                                                    </div>
                                                     <div style={{ 
                                                         width: '50px', height: '50px', 
                                                         background: item.type === 'video' ? '#eff6ff' : '#f0fdf4', 
@@ -522,13 +706,13 @@ const InstructorCourseDetails = () => {
                                                     </div>
                                                     <div>
                                                         <h4 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{item.title}</h4>
-                                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.25rem' }}>
                                                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-lighter)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.type}</span>
-                                                            {item.description && <span style={{ fontSize: '0.85rem', color: 'var(--text-light)', maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>• {item.description}</span>}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button onClick={() => setViewingContentDetails(item)} style={{ padding: '0.6rem', color: '#10b981', background: '#d1fae5', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }} title="View Details"><Eye size={18} /></button>
                                                     <button onClick={() => handleEditContent(item)} style={{ padding: '0.6rem', color: '#3b82f6', background: 'var(--primary-light)', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }} title="Edit"><Edit size={18} /></button>
                                                     <button onClick={() => handleDeleteContent(item._id)} style={{ padding: '0.6rem', color: '#ef4444', background: '#fee2e2', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }} title="Delete"><Trash2 size={18} /></button>
                                                 </div>
@@ -540,8 +724,11 @@ const InstructorCourseDetails = () => {
                                                 <Upload size={32} style={{ opacity: 0.5 }} />
                                             </div>
                                             <h3 style={{ color: 'var(--text-main)', marginBottom: '0.5rem' }}>No contents yet</h3>
-                                            <p style={{ maxWidth: '300px', margin: '0 auto 1.5rem' }}>Get started by uploading your first video lesson or PDF resource.</p>
-                                            <button onClick={() => setShowUploadModal(true)} style={{ color: '#2563eb', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>Upload Material</button>
+                                            <p style={{ maxWidth: '300px', margin: '0 auto 1.5rem' }}>Get started by uploading your first video lesson or auto-generating a structure with AI.</p>
+                                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                                <button onClick={() => { setSyllabusTopic(course?.title || ''); setShowSyllabusModal(true); }} style={{ color: '#8b5cf6', fontWeight: 600, background: '#f5f3ff', border: '1px solid #ddd6fe', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Sparkles size={16}/> Build with AI</button>
+                                                <button onClick={() => setShowUploadModal(true)} style={{ color: '#2563eb', fontWeight: 600, background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Plus size={16}/> Upload Material</button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -780,6 +967,117 @@ const InstructorCourseDetails = () => {
                     )}
                 </AnimatePresence>
 
+                {/* AI Syllabus Generator Modal */}
+                <AnimatePresence>
+                    {showSyllabusModal && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: -20 }} style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: syllabusStep === 'review' ? '800px' : '500px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10, paddingBottom: '1rem', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                            <Sparkles size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>{syllabusStep === 'review' ? 'Review & Edit Structure' : 'AI Structure Builder'}</h3>
+                                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{syllabusStep === 'review' ? 'Fine-tune your generated lesson plan before adding it to the course.' : 'Generate a complete curriculum instantly.'}</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={() => { setShowSyllabusModal(false); setSyllabusStep('input'); }} style={{ background: 'var(--bg-secondary)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
+                                </div>
+                                
+                                {syllabusStep === 'input' ? (
+                                    <form onSubmit={handleGenerateSyllabus}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            <div style={{ padding: '1rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                                                <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: '0 0 0.5rem', fontWeight: 500 }}>Focus Topic or Concept:</p>
+                                                <input 
+                                                    required 
+                                                    value={syllabusTopic} 
+                                                    onChange={e => setSyllabusTopic(e.target.value)} 
+                                                    placeholder="e.g. Advanced State Management in React" 
+                                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '0.95rem', color: 'var(--text-main)', outline: 'none' }} 
+                                                    disabled={isGeneratingSyllabus} 
+                                                />
+                                            </div>
+                                           
+                                            <button type="submit" disabled={isGeneratingSyllabus} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)', opacity: isGeneratingSyllabus ? 0.7 : 1 }}>
+                                                {isGeneratingSyllabus ? <><Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> Designing Syllabus...</> : <><Sparkles size={20}/> Generate Full Structure</>}
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {generatedSyllabus.map((module, index) => (
+                                            <div 
+                                                key={module._id} 
+                                                style={{ 
+                                                    background: 'var(--bg-main)', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '12px', padding: '1.25rem', 
+                                                    display: 'flex', gap: '1.25rem', alignItems: 'flex-start', position: 'relative'
+                                                }}
+                                            >
+                                                <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(0,0,0,0.05)', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'var(--text-lighter)', fontSize: '0.85rem' }}>
+                                                    {index + 1}
+                                                </div>
+                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                                        <input 
+                                                            value={module.title}
+                                                            onChange={e => handleUpdateSyllabusItem(index, 'title', e.target.value)}
+                                                            style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', outline: 'none' }}
+                                                        />
+                                                        <select 
+                                                            value={module.type}
+                                                            onChange={e => handleUpdateSyllabusItem(index, 'type', e.target.value)}
+                                                            style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '0.85rem', color: 'var(--text-main)', outline: 'none' }}
+                                                        >
+                                                            <option value="video">Video Lesson</option>
+                                                            <option value="pdf">Study Material (PDF)</option>
+                                                        </select>
+                                                    </div>
+                                                    {module.type === 'video' && (
+                                                        <textarea 
+                                                            value={module.description || ''}
+                                                            placeholder="Detailed description of the video..."
+                                                            onChange={e => handleUpdateSyllabusItem(index, 'description', e.target.value)}
+                                                            rows={3}
+                                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '0.95rem', color: 'var(--text-secondary)', outline: 'none', resize: 'vertical', lineHeight: '1.5' }}
+                                                        />
+                                                    )}
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleRemoveSyllabusItem(index)}
+                                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6, transition: 'opacity 0.2s', padding: '0.25rem' }}
+                                                    onMouseOver={e => e.currentTarget.style.opacity = 1}
+                                                    onMouseOut={e => e.currentTarget.style.opacity = 0.6}
+                                                    title="Remove Module"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                                            <button 
+                                                onClick={() => setSyllabusStep('input')} 
+                                                style={{ background: 'transparent', border: 'none', color: 'var(--text-light)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+                                            >
+                                                Start Over
+                                            </button>
+                                            <button 
+                                                onClick={handleSaveSyllabus}
+                                                disabled={isSavingSyllabus}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)' }}
+                                            >
+                                                {isSavingSyllabus ? <><Loader2 size={18} className="spin" /> Saving...</> : <><CheckCircle size={18}/> Confirm & Add to Content</>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* Assignment Modal */}
                 <AnimatePresence>
                     {showAssignmentModal && (
@@ -972,6 +1270,42 @@ const InstructorCourseDetails = () => {
                                     </div>
                                 </form>
                             </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                {/* View Content Detail Modal */}
+                <AnimatePresence>
+                    {viewingContentDetails && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <div style={{ background: 'var(--bg-card)', padding: '0', borderRadius: '16px', width: '600px', maxWidth: '90%', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+                                <div style={{ padding: '2rem 2rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'start', background: 'linear-gradient(to right, #f8fafc, #ffffff)' }}>
+                                    <div>
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.85rem', background: viewingContentDetails.type === 'video' ? '#eff6ff' : '#f0fdf4', color: viewingContentDetails.type === 'video' ? '#2563eb' : '#166534', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+                                            {viewingContentDetails.type === 'video' ? <Video size={14}/> : <FileText size={14}/>}
+                                            {viewingContentDetails.type === 'video' ? 'Video Lesson' : 'Study Material'}
+                                        </div>
+                                        <h3 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-main)', fontWeight: 800, lineHeight: 1.3 }}>{viewingContentDetails.title}</h3>
+                                    </div>
+                                    <button onClick={() => setViewingContentDetails(null)} style={{ background: 'var(--bg-main)', border: '1px solid #e2e8f0', cursor: 'pointer', color: 'var(--text-light)', borderRadius: '50%', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={e => e.currentTarget.style.background = 'var(--bg-main)'}><X size={20} /></button>
+                                </div>
+                                
+                                <div style={{ padding: '2rem', overflowY: 'auto' }}>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h4 style={{ fontSize: '0.85rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <FileText size={16} /> Description
+                                        </h4>
+                                        <div style={{ background: 'var(--bg-main)', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                            <p style={{ margin: 0, lineHeight: '1.7', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', fontSize: '0.95rem' }}>
+                                                {viewingContentDetails.description || <span style={{ color: 'var(--text-lighter)', fontStyle: 'italic' }}>No description provided.</span>}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid #e2e8f0', background: 'var(--bg-main)', display: 'flex', justifyContent: 'flex-end' }}>
+                                    <button onClick={() => setViewingContentDetails(null)} style={{ padding: '0.75rem 2rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }} onMouseOver={e => e.currentTarget.style.background = '#2563eb'} onMouseOut={e => e.currentTarget.style.background = '#3b82f6'}>Done</button>
+                                </div>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>

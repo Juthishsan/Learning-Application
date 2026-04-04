@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, Clock, Users, CheckCircle, Award, Video, FileText, Lock, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import CourseReviews from '../../components/Learner/CourseReviews';
 
 const CourseOverview = () => {
     const { id } = useParams();
@@ -12,44 +14,42 @@ const CourseOverview = () => {
     const [isInCart, setIsInCart] = useState(false);
     const [isEnrolled, setIsEnrolled] = useState(false);
 
-    useEffect(() => {
-        const fetchCourse = async () => {
+    const fetchCourse = async () => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/courses/${id}`);
+            const data = await res.json();
+            setCourse(data);
+            setLoading(false);
+        } catch (err) {
+            console.error("Failed to fetch course details", err);
+            setLoading(false);
+        }
+    };
+
+    const checkStatus = async () => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const user = JSON.parse(storedUser);
             try {
-                const res = await fetch(`http://localhost:5000/api/courses/${id}`);
-                const data = await res.json();
-                setCourse(data);
-                setLoading(false);
+                // Check Enrollment
+                const enrollRes = await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses`);
+                const enrollData = await enrollRes.json();
+                const isEnrolledCheck = enrollData.some(enrollment => (enrollment.courseId?._id === id || enrollment.courseId === id));
+                setIsEnrolled(isEnrolledCheck);
+
+                // Check Cart
+                const cartRes = await fetch(`http://localhost:5000/api/cart/${user.id || user._id}`);
+                const cartData = await cartRes.json();
+                const isInCartCheck = cartData.some(item => (item._id === id || item === id));
+                setIsInCart(isInCartCheck);
+
             } catch (err) {
-                console.error("Failed to fetch course details", err);
-                setLoading(false);
+                console.error("Failed to check status");
             }
-        };
+        }
+    };
 
-        const checkStatus = async () => {
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-                const user = JSON.parse(storedUser);
-                try {
-                    // Check Enrollment
-                    const enrollRes = await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses`);
-                    const enrollData = await enrollRes.json();
-                    const isEnrolledCheck = enrollData.some(enrollment => (enrollment.courseId?._id === id || enrollment.courseId === id));
-                    setIsEnrolled(isEnrolledCheck);
-
-                    // Check Cart
-                    const cartRes = await fetch(`http://localhost:5000/api/cart/${user.id || user._id}`);
-                    const cartData = await cartRes.json();
-                    // cartData is array of course objects or IDs depending on populate. 
-                    // The backend returns populated objects usually if configured, but let's check both
-                    const isInCartCheck = cartData.some(item => (item._id === id || item === id));
-                    setIsInCart(isInCartCheck);
-
-                } catch (err) {
-                    console.error("Failed to check status");
-                }
-            }
-        };
-
+    useEffect(() => {
         fetchCourse();
         checkStatus();
     }, [id]);
@@ -97,11 +97,132 @@ const CourseOverview = () => {
         }
     };
 
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewVideo, setPreviewVideo] = useState(null);
+
+    const handlePreview = () => {
+        const firstVideo = course.content?.find(item => item.type === 'video');
+        if (firstVideo) {
+            setPreviewVideo(firstVideo);
+            setShowPreview(true);
+        } else {
+            toast.error('No preview video available for this course');
+        }
+    };
+
+    useEffect(() => {
+        if (showPreview) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+        return () => { document.body.style.overflow = 'auto'; };
+    }, [showPreview]);
+
     if (loading) return <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="loading-spinner"></div></div>;
     if (!course) return <div style={{ padding: '4rem', textAlign: 'center' }}>Course not found</div>;
 
+    const videoLessons = (course.content?.filter(item => item.type === 'video') || []).slice(0, 2);
+
     return (
         <div style={{ background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+            {/* Preview Modal */}
+            <AnimatePresence>
+                {showPreview && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{ 
+                            position: 'fixed', inset: 0, zIndex: 9999, 
+                            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '1rem'
+                        }}
+                        onClick={() => setShowPreview(false)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            onClick={e => e.stopPropagation()}
+                            style={{ 
+                                background: '#1e293b', width: '100%', maxWidth: '750px', 
+                                maxHeight: '90vh',
+                                display: 'flex', flexDirection: 'column',
+                                borderRadius: '24px', overflow: 'hidden', 
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            {/* Modal Header */}
+                            <div style={{ padding: '1.25rem 1.5rem', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                                <div>
+                                    <p style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>Course Preview</p>
+                                    <h3 style={{ color: 'white', fontSize: '1.1rem', fontWeight: 800 }}>{course.title}</h3>
+                                </div>
+                                <button 
+                                    onClick={() => setShowPreview(false)}
+                                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: '36px', height: '36px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Video Player Section */}
+                            <div style={{ background: 'black', aspectRatio: '16/9', position: 'relative', flexShrink: 0 }}>
+                                {previewVideo?.url ? (
+                                    <video 
+                                        src={previewVideo.url} 
+                                        controls 
+                                        autoPlay 
+                                        style={{ width: '100%', height: '100%' }}
+                                    />
+                                ) : (
+                                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', flexDirection: 'column', gap: '1rem' }}>
+                                        <Video size={48} />
+                                        <p>Video source unavailable</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Sample Lessons List */}
+                            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+                                <h4 style={{ color: 'white', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <PlayCircle size={18} color="#38bdf8" /> Free Sample Videos:
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {videoLessons.map((vid, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => setPreviewVideo(vid)}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', gap: '1rem', 
+                                                padding: '1rem', borderRadius: '16px', 
+                                                background: previewVideo?.title === vid.title ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255,255,255,0.03)',
+                                                border: previewVideo?.title === vid.title ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent',
+                                                textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s',
+                                                width: '100%', color: 'white'
+                                            }}
+                                        >
+                                            <div style={{ width: '80px', height: '45px', background: '#0f172a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+                                                <Video size={16} color="#475569" />
+                                                {previewVideo?.title === vid.title && <div style={{ position: 'absolute', inset: 0, background: 'rgba(56, 189, 248, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="playing-pulse"></div></div>}
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: previewVideo?.title === vid.title ? '#38bdf8' : 'white' }}>{vid.title}</p>
+                                                <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Video • 5:30</p>
+                                            </div>
+                                            {previewVideo?.title === vid.title && <CheckCircle size={18} color="#38bdf8" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Hero Section */}
             <div style={{ background: '#0f172a', color: 'white', padding: '5rem 0 10rem', position: 'relative', overflow: 'hidden' }}>
                 {course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) && (
@@ -135,10 +256,10 @@ const CourseOverview = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div style={{ display: 'flex' }}>
-                                    {[1,2,3,4,5].map(star => <Star key={star} size={20} fill="#fbbf24" stroke="#fbbf24" />)}
+                                    {[1,2,3,4,5].map(star => <Star key={star} size={20} fill={star <= Math.round(course.rating || 4.5) ? "#fbbf24" : "none"} stroke={star <= Math.round(course.rating || 4.5) ? "#fbbf24" : "#cbd5e1"} />)}
                                 </div>
                                 <span style={{ fontWeight: 700, color: '#fbbf24' }}>{course.rating || 4.5}</span>
-                                <span style={{ color: '#94a3b8' }}>(1,240 ratings)</span>
+                                <span style={{ color: '#94a3b8' }}>({course.numReviews || 1240} ratings)</span>
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#e2e8f0' }}>
@@ -180,7 +301,7 @@ const CourseOverview = () => {
                         </div>
 
                         {/* Course Content Preview (Locked) */}
-                        <div className="card" style={{ padding: '2.5rem', background: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                        <div className="card" style={{ padding: '2.5rem', marginBottom: '2rem', background: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '1.5rem', color: '#0f172a' }}>Course Content</h2>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.9rem', color: '#64748b' }}>
                                 <span>{course.content?.length || 0} lessons</span>
@@ -216,6 +337,17 @@ const CourseOverview = () => {
                                 )}
                             </div>
                         </div>
+
+                        {/* Reviews Section */}
+                        <div className="card" style={{ padding: '2.5rem', background: 'white', borderRadius: '1rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                            <CourseReviews 
+                                courseId={id} 
+                                reviews={course.reviews} 
+                                rating={course.rating} 
+                                numReviews={course.numReviews}
+                                onReviewAdded={fetchCourse} 
+                            />
+                        </div>
                     </div>
 
                     {/* Right Column: Enrollment Card (Sticky) */}
@@ -223,19 +355,23 @@ const CourseOverview = () => {
                         <div style={{ position: 'sticky', top: '100px', background: 'white', padding: '2rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', border: '1px solid #e2e8f0' }}>
                             
                             {/* Check if video exists for preview */}
-                            <div style={{ 
-                                marginBottom: '1.5rem', 
-                                borderRadius: '12px', 
-                                overflow: 'hidden', 
-                                height: '180px', 
-                                background: course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) ? `url(${course.thumbnail})` : '#0f172a',
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                position: 'relative', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center' 
-                            }}>
+                            <div 
+                                onClick={handlePreview}
+                                style={{ 
+                                    marginBottom: '1.5rem', 
+                                    borderRadius: '12px', 
+                                    overflow: 'hidden', 
+                                    height: '180px', 
+                                    background: course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) ? `url(${course.thumbnail})` : '#0f172a',
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    position: 'relative', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                }}
+                            >
                                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }}></div>
                                 <PlayCircle size={64} color="white" style={{ opacity: 0.9, position: 'relative', zIndex: 2 }} />
                                 <div style={{ position: 'absolute', bottom: '1rem', width: '100%', textAlign: 'center', color: 'white', fontWeight: 600, fontSize: '0.9rem', zIndex: 2 }}>Preview this course</div>
@@ -298,6 +434,16 @@ const CourseOverview = () => {
             @media (max-width: 900px) {
                 div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
                 .container { margin-top: 0 !important; }
+            }
+
+            @keyframes pulse {
+                0% { transform: scale(0.95); opacity: 0.5; }
+                50% { transform: scale(1.05); opacity: 1; }
+                100% { transform: scale(0.95); opacity: 0.5; }
+            }
+            .playing-pulse {
+                width: 12px; height: 12px; background: #38bdf8; border-radius: 50%;
+                animation: pulse 1.5s infinite ease-in-out;
             }
             `}</style>
         </div>

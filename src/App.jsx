@@ -14,6 +14,7 @@ import CourseContent from './pages/Learner/CourseContent';
 import About from './pages/Learner/About';
 import Contact from './pages/Learner/Contact';
 import Cart from './pages/Learner/Cart';
+import Checkout from './pages/Learner/Checkout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminSettings from './pages/Admin/AdminSettings';
@@ -26,6 +27,7 @@ import AdminEarnings from './pages/Admin/AdminEarnings';
 import InstructorProfile from './pages/Instructor/InstructorProfile';
 import InstructorSettings from './pages/Instructor/InstructorSettings';
 import InstructorCourseDetails from './pages/Instructor/InstructorCourseDetails';
+import Chatbot from './components/Chatbot/Chatbot';
 
 
 const NavbarWrapper = () => {
@@ -41,6 +43,13 @@ const FooterWrapper = () => { // Create Footer Wrapper
   const isCourseContent = location.pathname.startsWith('/course-content');
   if (isAdminRoute || isCourseContent) return null;
   return <Footer />;
+};
+
+const ChatbotWrapper = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/instructor');
+  if (isAdminRoute) return null;
+  return <Chatbot />;
 };
 
 function App() {
@@ -78,6 +87,7 @@ function App() {
             <Route path="/about" element={<div style={{paddingTop: '80px'}}><About /></div>} />
             <Route path="/contact" element={<div style={{paddingTop: '80px'}}><Contact /></div>} />
             <Route path="/cart" element={<div style={{paddingTop: '80px'}}><Cart /></div>} />
+            <Route path="/checkout" element={<div style={{paddingTop: '80px'}}><Checkout /></div>} />
             
             {/* Admin Routes */}
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -97,6 +107,7 @@ function App() {
           </Routes>
         </main>
         <FooterWrapper />
+        <ChatbotWrapper />
       </div>
     </Router>
   );

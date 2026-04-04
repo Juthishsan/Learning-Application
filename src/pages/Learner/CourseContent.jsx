@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PlayCircle, FileText, CheckCircle, ChevronLeft, Menu, Lock, Download, ChevronRight, Video, File, HelpCircle, Check, X as XIcon, RefreshCw, Trophy, ArrowRight, Clock, AlertCircle, Calendar, Search, Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import CustomVideoPlayer from '../../components/Learner/CustomVideoPlayer';
+import CertificateModal from '../../components/Learner/CertificateModal';
 
 // Helper to mix content array with assignments and quizzes
 const mergeContent = (course) => {
@@ -63,6 +65,19 @@ const CourseContent = () => {
     const [scrollProgress, setScrollProgress] = useState(0); // 0 to 1
     const [isPinned, setIsPinned] = useState(false);
     
+    // Certificate States
+    const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+    const [certData, setCertData] = useState(null);
+    const [isCertLoading, setIsCertLoading] = useState(false);
+    
+    // Notes & Selection States
+    const [notes, setNotes] = useState(() => {
+        const saved = localStorage.getItem(`notes_${id}`);
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0, text: '', startTime: 0 });
+    const selectionRef = useRef(null);
+    
     // Refs for sticky player
     const scrollContainerRef = useRef(null);
     const videoWrapperRef = useRef(null);
@@ -77,9 +92,11 @@ const CourseContent = () => {
             }
             
             const scrollTop = scrollContainerRef.current.scrollTop;
-            const startHeight = 600;
-            const minHeight = 210;
-            const transitionDistance = startHeight - minHeight; // 390px
+            
+            // Initial Video Container Flow Height = 600px height + 2rem*2 (64px) padding = 664px
+            // Target Video Container Flow Height = 210px height + 0.5rem*2 (16px) padding = 226px
+            // Total height lost = 438px
+            const transitionDistance = 438; // Pixels over which to morph
             
             // Calculate progress (0 to 1) perfectly mapped to height reduction
             const progress = Math.min(1, Math.max(0, scrollTop / transitionDistance));
@@ -130,6 +147,67 @@ const CourseContent = () => {
             }
         }
     }, [activeSegIndex, videoInfoTab, searchTerm, isAutoScrollEnabled]);
+
+    // Handle Transcript Text Selection
+    const handleTranscriptSelection = (e, segment) => {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        
+        if (selectedText && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            // Position the popup above the selection
+            setSelectionPopup({
+                visible: true,
+                x: rect.left + (rect.width / 2),
+                y: rect.top + window.scrollY,
+                text: selectedText,
+                startTime: segment.startTime
+            });
+        } else {
+            setSelectionPopup(prev => ({ ...prev, visible: false }));
+        }
+    };
+
+    const saveNote = () => {
+        if (!selectionPopup.text) return;
+        
+        const newNote = {
+            id: Date.now(),
+            text: selectionPopup.text,
+            startTime: selectionPopup.startTime,
+            contentTitle: activeContent.title,
+            createdAt: new Date().toISOString()
+        };
+        
+        const updatedNotes = [newNote, ...notes];
+        setNotes(updatedNotes);
+        localStorage.setItem(`notes_${id}`, JSON.stringify(updatedNotes));
+        
+        // Success feedback
+        toast.success('Note saved!', {
+            icon: '📝',
+            style: { borderRadius: '10px', background: '#333', color: '#fff' }
+        });
+        
+        // Hide popup and clear selection
+        setSelectionPopup(prev => ({ ...prev, visible: false }));
+        window.getSelection()?.removeAllRanges();
+    };
+
+    const deleteNote = (noteId) => {
+        const updatedNotes = notes.filter(n => n.id !== noteId);
+        setNotes(updatedNotes);
+        localStorage.setItem(`notes_${id}`, JSON.stringify(updatedNotes));
+        toast.success('Note removed');
+    };
+
+    const clearNotes = () => {
+        setNotes([]);
+        localStorage.removeItem(`notes_${id}`);
+        toast.success('All notes cleared');
+    };
 
     useEffect(() => {
         const fetchCourseAndCheckEnrollment = async () => {
@@ -468,6 +546,26 @@ const CourseContent = () => {
         return groups;
     };
 
+    const fetchCertificateData = async () => {
+        setIsCertLoading(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses/${id}/certificate`);
+            const data = await res.json();
+            
+            if (res.ok) {
+                setCertData(data);
+                setIsCertModalOpen(true);
+            } else {
+                toast.error(data.msg || "Completion requirements not met.");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to generate certificate.");
+        } finally {
+            setIsCertLoading(false);
+        }
+    };
+
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'white', fontFamily: "'Inter', sans-serif", paddingTop: '80px', boxSizing: 'border-box' }}>
             
@@ -486,19 +584,69 @@ const CourseContent = () => {
                     position: 'relative',
                 }}
             >
-                <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                    <h3 style={{ color: '#1e293b', fontWeight: 700, margin: 0, fontSize: '1rem' }}>Course Content</h3>
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
-                        {completedContent.length} / {mixedContent.length} Completed
+                <div style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', background: 'linear-gradient(to bottom, #ffffff, #f8fafc)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h3 style={{ color: '#0f172a', fontWeight: 800, margin: 0, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>Course Content</h3>
+                        <div style={{ background: '#f1f5f9', padding: '0.25rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                            {Math.round((completedContent.length / mixedContent.length) * 100)}%
+                        </div>
                     </div>
+                    {/* Visual Progress Bar */}
+                    <div style={{ height: '6px', width: '100%', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                        <div 
+                            style={{ 
+                                height: '100%', 
+                                width: `${(completedContent.length / mixedContent.length) * 100}%`, 
+                                background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+                                borderRadius: '10px',
+                                transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }} 
+                        />
+                    </div>
+                    <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>
+                        {completedContent.length} of {mixedContent.length} lessons completed
+                    </div>
+                    
+                    {/* Claim Certificate Button */}
+                    {completedContent.length === mixedContent.length && mixedContent.length > 0 && (
+                        <motion.button
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            onClick={fetchCertificateData}
+                            disabled={isCertLoading}
+                            style={{
+                                marginTop: '1.25rem',
+                                width: '100%',
+                                padding: '1rem',
+                                background: 'linear-gradient(135deg, #1e40af, #3b82f6)',
+                                border: 'none',
+                                borderRadius: '12px',
+                                color: '#fff',
+                                fontWeight: 800,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.75rem',
+                                boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.4)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)'
+                            }}
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <Trophy size={18} color="#fbbf24" />
+                            {isCertLoading ? 'Verifying...' : 'Claim Certificate'}
+                        </motion.button>
+                    )}
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     
                     {/* Video Section */}
                     {videoContents.length > 0 && (
-                        <div>
-                             <div style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '0.5rem' }}>
+                             <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                  Video Lessons
                              </div>
                              {videoContents.map((item, idx) => {
@@ -509,24 +657,47 @@ const CourseContent = () => {
                                          key={item._id || idx} 
                                          onClick={() => { setActiveContent(item); }}
                                          style={{ 
-                                             padding: '1rem 1.5rem', 
-                                             borderBottom: '1px solid #f8fafc', 
+                                             padding: '0.85rem 1rem', 
+                                             margin: '0.2rem 0.5rem',
+                                             borderRadius: '12px',
                                              cursor: 'pointer',
-                                             background: isActive ? '#eff6ff' : 'white',
-                                             borderLeft: isActive ? '4px solid #0ea5e9' : '4px solid transparent',
-                                             transition: 'all 0.2s'
+                                             background: isActive ? '#eff6ff' : 'transparent',
+                                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                             position: 'relative',
+                                             border: isActive ? '1px solid #dbeafe' : '1px solid transparent',
+                                             boxShadow: isActive ? '0 4px 6px -1px rgba(59, 130, 246, 0.1)' : 'none'
                                          }}
-                                         className="hover:bg-slate-50"
+                                         className={isActive ? "" : "sidebar-item-hover"}
                                      >
-                                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                                             <div style={{ marginTop: '2px', color: isActive ? '#0ea5e9' : (isCompleted ? '#22c55e' : '#94a3b8') }}>
-                                                 {isCompleted ? <CheckCircle size={16} /> : <PlayCircle size={16} />}
+                                         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                                             <div style={{ 
+                                                 width: '32px', height: '32px', borderRadius: '8px', 
+                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                 background: isActive ? '#3b82f6' : (isCompleted ? '#dcfce7' : '#f1f5f9'),
+                                                 color: isActive ? 'white' : (isCompleted ? '#16a34a' : '#64748b'),
+                                                 flexShrink: 0,
+                                                 transition: 'all 0.3s ease'
+                                             }}>
+                                                 {isCompleted ? <Check size={18} strokeWidth={3} /> : <PlayCircle size={18} />}
                                              </div>
-                                             <div>
-                                                 <p style={{ margin: 0, fontSize: '0.9rem', color: isActive ? '#0f172a' : '#334155', fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
+                                             <div style={{ flex: 1, minWidth: 0 }}>
+                                                 <p style={{ 
+                                                     margin: 0, 
+                                                     fontSize: '0.9rem', 
+                                                     color: isActive ? '#1e40af' : (isCompleted ? '#334155' : '#475569'), 
+                                                     fontWeight: isActive ? 700 : 500, 
+                                                     lineHeight: 1.4,
+                                                     whiteSpace: 'nowrap',
+                                                     overflow: 'hidden',
+                                                     textOverflow: 'ellipsis'
+                                                 }}>
                                                      {item.title}
                                                  </p>
-                                                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Video • {idx + 1}</span>
+                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
+                                                     <span style={{ fontSize: '0.75rem', color: isActive ? '#60a5fa' : '#94a3b8' }}>
+                                                         Video • {idx + 1}
+                                                     </span>
+                                                 </div>
                                              </div>
                                          </div>
                                      </div>
@@ -537,8 +708,8 @@ const CourseContent = () => {
 
                     {/* Study Materials Section */}
                     {studyMaterials.length > 0 && (
-                        <div style={{ borderTop: videoContents.length > 0 ? '1px solid #e2e8f0' : 'none' }}>
-                             <div style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '0.5rem', borderTop: '1px solid #f1f5f9', marginTop: '0.5rem' }}>
+                             <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                  Study Materials
                              </div>
                              {studyMaterials.map((item, idx) => {
@@ -549,24 +720,42 @@ const CourseContent = () => {
                                          key={item._id || idx} 
                                          onClick={() => { setActiveContent(item); }}
                                          style={{ 
-                                             padding: '1rem 1.5rem', 
-                                             borderBottom: '1px solid #f8fafc', 
+                                             padding: '0.85rem 1rem', 
+                                             margin: '0.2rem 0.5rem',
+                                             borderRadius: '12px',
                                              cursor: 'pointer',
-                                             background: isActive ? '#eff6ff' : 'white',
-                                             borderLeft: isActive ? '4px solid #0ea5e9' : '4px solid transparent',
-                                             transition: 'all 0.2s'
+                                             background: isActive ? '#eff6ff' : 'transparent',
+                                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                             position: 'relative',
+                                             border: isActive ? '1px solid #dbeafe' : '1px solid transparent',
+                                             boxShadow: isActive ? '0 4px 6px -1px rgba(59, 130, 246, 0.1)' : 'none'
                                          }}
-                                         className="hover:bg-slate-50"
+                                         className={isActive ? "" : "sidebar-item-hover"}
                                      >
-                                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                                             <div style={{ marginTop: '2px', color: isActive ? '#0ea5e9' : (isCompleted ? '#22c55e' : '#94a3b8') }}>
-                                                  {isCompleted ? <CheckCircle size={16} /> : <FileText size={16} />}
+                                         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                                             <div style={{ 
+                                                 width: '32px', height: '32px', borderRadius: '8px', 
+                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                 background: isActive ? '#3b82f6' : (isCompleted ? '#dcfce7' : '#f1f5f9'),
+                                                 color: isActive ? 'white' : (isCompleted ? '#16a34a' : '#64748b'),
+                                                 flexShrink: 0
+                                             }}>
+                                                  {isCompleted ? <Check size={18} strokeWidth={3} /> : <FileText size={18} />}
                                              </div>
-                                             <div>
-                                                 <p style={{ margin: 0, fontSize: '0.9rem', color: isActive ? '#0f172a' : '#334155', fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
+                                             <div style={{ flex: 1, minWidth: 0 }}>
+                                                 <p style={{ 
+                                                     margin: 0, 
+                                                     fontSize: '0.9rem', 
+                                                     color: isActive ? '#1e40af' : (isCompleted ? '#334155' : '#475569'), 
+                                                     fontWeight: isActive ? 700 : 500, 
+                                                     lineHeight: 1.4,
+                                                     whiteSpace: 'nowrap',
+                                                     overflow: 'hidden',
+                                                     textOverflow: 'ellipsis'
+                                                 }}>
                                                      {item.title}
                                                  </p>
-                                                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Resource • {item.type.toUpperCase()}</span>
+                                                 <span style={{ fontSize: '0.75rem', color: isActive ? '#60a5fa' : '#94a3b8' }}>Resource • {item.type.toUpperCase()}</span>
                                              </div>
                                          </div>
                                      </div>
@@ -577,8 +766,8 @@ const CourseContent = () => {
                     
                     {/* Assignments Section */}
                     {assignmentsList.length > 0 && (
-                        <div style={{ borderTop: studyMaterials.length > 0 ? '1px solid #e2e8f0' : 'none' }}>
-                             <div style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '0.5rem', borderTop: '1px solid #f1f5f9', marginTop: '0.5rem' }}>
+                             <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                  Assignments
                              </div>
                              {assignmentsList.map((item, idx) => {
@@ -590,24 +779,42 @@ const CourseContent = () => {
                                          key={item._id} 
                                          onClick={() => setActiveContent(item)}
                                          style={{ 
-                                             padding: '1rem 1.5rem', 
-                                             borderBottom: '1px solid #f8fafc', 
+                                             padding: '0.85rem 1rem', 
+                                             margin: '0.2rem 0.5rem',
+                                             borderRadius: '12px',
                                              cursor: 'pointer',
-                                             background: isActive ? '#eff6ff' : 'white',
-                                             borderLeft: isActive ? '4px solid #0ea5e9' : '4px solid transparent',
-                                             transition: 'all 0.2s'
+                                             background: isActive ? '#eff6ff' : 'transparent',
+                                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                             position: 'relative',
+                                             border: isActive ? '1px solid #dbeafe' : '1px solid transparent',
+                                             boxShadow: isActive ? '0 4px 6px -1px rgba(59, 130, 246, 0.1)' : 'none'
                                          }}
-                                         className="hover:bg-slate-50"
+                                         className={isActive ? "" : "sidebar-item-hover"}
                                      >
-                                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                                             <div style={{ marginTop: '2px', color: isActive ? '#0ea5e9' : (isPassed ? '#22c55e' : '#94a3b8') }}>
-                                                  {isPassed ? <CheckCircle size={16} /> : <HelpCircle size={16} />}
+                                         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                                             <div style={{ 
+                                                 width: '32px', height: '32px', borderRadius: '8px', 
+                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                 background: isActive ? '#3b82f6' : (isPassed ? '#dcfce7' : '#f1f5f9'),
+                                                 color: isActive ? 'white' : (isPassed ? '#16a34a' : '#64748b'),
+                                                 flexShrink: 0
+                                             }}>
+                                                  {isPassed ? <Check size={18} strokeWidth={3} /> : <HelpCircle size={18} />}
                                              </div>
-                                             <div>
-                                                 <p style={{ margin: 0, fontSize: '0.9rem', color: isActive ? '#0f172a' : '#334155', fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
+                                             <div style={{ flex: 1, minWidth: 0 }}>
+                                                 <p style={{ 
+                                                     margin: 0, 
+                                                     fontSize: '0.9rem', 
+                                                     color: isActive ? '#1e40af' : (isPassed ? '#334155' : '#475569'), 
+                                                     fontWeight: isActive ? 700 : 500, 
+                                                     lineHeight: 1.4,
+                                                     whiteSpace: 'nowrap',
+                                                     overflow: 'hidden',
+                                                     textOverflow: 'ellipsis'
+                                                 }}>
                                                      {item.title}
                                                  </p>
-                                                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Assignment • Task</span>
+                                                 <span style={{ fontSize: '0.75rem', color: isActive ? '#60a5fa' : '#94a3b8' }}>Assignment • Task</span>
                                              </div>
                                          </div>
                                      </div>
@@ -618,8 +825,8 @@ const CourseContent = () => {
 
                     {/* Quizzes Section */}
                     {quizzesList.length > 0 && (
-                        <div style={{ borderTop: '1px solid #e2e8f0' }}>
-                             <div style={{ padding: '0.75rem 1.5rem', background: '#f1f5f9', fontSize: '0.85rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ padding: '0.5rem', borderTop: '1px solid #f1f5f9', marginTop: '0.5rem' }}>
+                             <div style={{ padding: '1rem 1rem 0.5rem', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                  Quizzes
                              </div>
                              {quizzesList.map((item, idx) => {
@@ -631,24 +838,42 @@ const CourseContent = () => {
                                          key={item._id} 
                                          onClick={() => setActiveContent(item)}
                                          style={{ 
-                                             padding: '1rem 1.5rem', 
-                                             borderBottom: '1px solid #f8fafc', 
+                                             padding: '0.85rem 1rem', 
+                                             margin: '0.2rem 0.5rem',
+                                             borderRadius: '12px',
                                              cursor: 'pointer',
-                                             background: isActive ? '#eff6ff' : 'white',
-                                             borderLeft: isActive ? '4px solid #0ea5e9' : '4px solid transparent',
-                                             transition: 'all 0.2s'
+                                             background: isActive ? '#eff6ff' : 'transparent',
+                                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                             position: 'relative',
+                                             border: isActive ? '1px solid #dbeafe' : '1px solid transparent',
+                                             boxShadow: isActive ? '0 4px 6px -1px rgba(59, 130, 246, 0.1)' : 'none'
                                          }}
-                                         className="hover:bg-slate-50"
+                                         className={isActive ? "" : "sidebar-item-hover"}
                                      >
-                                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                                             <div style={{ marginTop: '2px', color: isActive ? '#0ea5e9' : (isPassed ? '#22c55e' : '#94a3b8') }}>
-                                                  {isPassed ? <CheckCircle size={16} /> : <HelpCircle size={16} />}
+                                         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                                             <div style={{ 
+                                                 width: '32px', height: '32px', borderRadius: '8px', 
+                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                 background: isActive ? '#3b82f6' : (isPassed ? '#dcfce7' : '#f1f5f9'),
+                                                 color: isActive ? 'white' : (isPassed ? '#16a34a' : '#64748b'),
+                                                 flexShrink: 0
+                                             }}>
+                                                  {isPassed ? <Check size={18} strokeWidth={3} /> : <HelpCircle size={18} />}
                                              </div>
-                                             <div>
-                                                 <p style={{ margin: 0, fontSize: '0.9rem', color: isActive ? '#0f172a' : '#334155', fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
+                                             <div style={{ flex: 1, minWidth: 0 }}>
+                                                 <p style={{ 
+                                                     margin: 0, 
+                                                     fontSize: '0.9rem', 
+                                                     color: isActive ? '#1e40af' : (isPassed ? '#334155' : '#475569'), 
+                                                     fontWeight: isActive ? 700 : 500, 
+                                                     lineHeight: 1.4,
+                                                     whiteSpace: 'nowrap',
+                                                     overflow: 'hidden',
+                                                     textOverflow: 'ellipsis'
+                                                 }}>
                                                      {item.title}
                                                  </p>
-                                                 <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Quiz • {item.questions?.length} Questions</span>
+                                                 <span style={{ fontSize: '0.75rem', color: isActive ? '#60a5fa' : '#94a3b8' }}>Quiz • {item.questions?.length} Questions</span>
                                              </div>
                                          </div>
                                      </div>
@@ -1084,9 +1309,10 @@ const CourseContent = () => {
                                             justifyContent: 'center',
                                             zIndex: 100,
                                             boxShadow: isPinned ? '0 10px 40px rgba(0,0,0,0.6)' : 'none',
-                                            transition: 'padding 0.05s ease, height 0.05s ease, box-shadow 0.3s ease',
+                                            transition: 'box-shadow 0.3s ease', // NO height/padding transition here
                                             overflow: 'hidden',
-                                            borderBottom: isPinned ? '1px solid #334155' : 'none'
+                                            borderBottom: isPinned ? '1px solid #334155' : 'none',
+                                            willChange: 'height, padding' // Performance hint
                                         }}>
                                             <div style={{ 
                                                 width: '100%', 
@@ -1095,8 +1321,8 @@ const CourseContent = () => {
                                                 height: 'auto',
                                                 position: 'relative',
                                                 transform: `scale(${1 - (0.05 * scrollProgress)})`,
-                                                transition: 'all 0.05s ease',
-                                                transformOrigin: 'top center'
+                                                transformOrigin: 'top center',
+                                                willChange: 'transform, max-width' // Performance hint
                                             }}>
                                                 <CustomVideoPlayer 
                                                     src={activeContent.url} 
@@ -1107,9 +1333,9 @@ const CourseContent = () => {
                                             </div>
                                         </div>
 
-                                        {/* Layout Sync Spacer - Keeps text attached to video bottom during transition */}
+                                        {/* Layout Sync Spacer - Keeps total height CONSTANT (664px) during 438px transition */}
                                         <div style={{ 
-                                            height: `${390 * scrollProgress}px`, 
+                                            height: `${438 * scrollProgress}px`, 
                                             width: '100%',
                                             pointerEvents: 'none',
                                             visibility: 'hidden'
@@ -1130,13 +1356,38 @@ const CourseContent = () => {
                                                 >
                                                     <Search size={16} /> Smart Search
                                                 </button>
-                                                <button style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>
+                                                <button 
+                                                    onClick={() => setVideoInfoTab('notes')}
+                                                    style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', borderBottom: videoInfoTab === 'notes' ? '2px solid #2563eb' : '2px solid transparent', color: videoInfoTab === 'notes' ? '#2563eb' : '#64748b', fontWeight: 600, cursor: 'pointer' }}
+                                                >
                                                     Notes
                                                 </button>
-                                                <button style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>
-                                                    Resources
-                                                </button>
                                             </div>
+
+                                            {/* Note Selection Popup */}
+                                            {selectionPopup.visible && (
+                                                <div 
+                                                    style={{ 
+                                                        position: 'fixed', 
+                                                        top: (selectionPopup.y - 45) + 'px', 
+                                                        left: selectionPopup.x + 'px', 
+                                                        transform: 'translateX(-50%)',
+                                                        zIndex: 2000,
+                                                        animation: 'popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                                    }}
+                                                >
+                                                    <button 
+                                                        onClick={saveNote}
+                                                        style={{ 
+                                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                            background: '#0f172a', color: 'white', padding: '0.5rem 1rem', borderRadius: '24px', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)', whiteSpace: 'nowrap'
+                                                        }}
+                                                    >
+                                                        <Plus size={14} /> Save a note
+                                                    </button>
+                                                    <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #0f172a', margin: '0 auto' }}></div>
+                                                </div>
+                                            )}
 
                                             <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#1e293b', marginBottom: '1rem' }}>
                                                 {activeContent.title}
@@ -1159,6 +1410,67 @@ const CourseContent = () => {
                                                     <p>
                                                         {activeContent.description || 'In this lesson, you will learn the fundamental concepts and practical applications. Make sure to take notes and review the attached resources.'}
                                                     </p>
+                                                </div>
+                                            )}
+
+                                            {videoInfoTab === 'notes' && (
+                                                <div style={{ animation: 'fadeIn 0.3s' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Your Notes</h3>
+                                                        {notes.length > 0 && (
+                                                            <button 
+                                                                onClick={clearNotes}
+                                                                style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                                                            >
+                                                                Clear All
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    {notes.length > 0 ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                            {notes.map(note => (
+                                                                <div 
+                                                                    key={note.id} 
+                                                                    style={{ 
+                                                                        padding: '1.25rem', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#fff', position: 'relative', transition: 'all 0.2s'
+                                                                    }}
+                                                                    className="hover:border-blue-200 hover:shadow-sm"
+                                                                >
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                                                                        <button 
+                                                                            onClick={() => jumpToTime(note.startTime)}
+                                                                            style={{ background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '6px', padding: '0.25rem 0.6rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                                                        >
+                                                                            <PlayCircle size={14} />
+                                                                            {Math.floor(note.startTime/60)}:{(note.startTime%60).toString().padStart(2, '0')}
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => deleteNote(note.id)}
+                                                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                                                        >
+                                                                            <XIcon size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                    <p style={{ margin: 0, color: '#334155', lineHeight: '1.6', fontSize: '0.95rem' }}>"{note.text}"</p>
+                                                                    <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                                            Refers to: <span style={{ color: '#64748b', fontWeight: 600 }}>{note.contentTitle}</span>
+                                                                        </span>
+                                                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{new Date(note.createdAt).toLocaleDateString()}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ textAlign: 'center', padding: '4rem 2rem', background: '#f8fafc', borderRadius: '12px', border: '2px dashed #e2e8f0' }}>
+                                                            <div style={{ width: '60px', height: '60px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', color: '#94a3b8' }}>
+                                                                <FileText size={24} />
+                                                            </div>
+                                                            <h4 style={{ color: '#1e293b', margin: '0 0 0.5rem' }}>No notes yet</h4>
+                                                            <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '300px', margin: '0 auto' }}>Select any text in the transcript to save it as a note for quick reference later.</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -1272,6 +1584,7 @@ const CourseContent = () => {
                                                                                         <span 
                                                                                             key={sIdx}
                                                                                             onClick={() => jumpToTime(seg.startTime)}
+                                                                                            onMouseUp={(e) => handleTranscriptSelection(e, seg)}
                                                                                             data-active-transcript={isActive}
                                                                                             style={{ 
                                                                                                 cursor: 'pointer',
@@ -1345,7 +1658,18 @@ const CourseContent = () => {
                 </div>
             </div>
             
+            {/* Certificate Modal */}
+            <CertificateModal 
+                isOpen={isCertModalOpen} 
+                onClose={() => setIsCertModalOpen(false)} 
+                certData={certData} 
+            />
+
             <style jsx>{`
+                .sidebar-item-hover:hover { 
+                    background-color: #f8fafc !important; 
+                    transform: translateX(4px);
+                }
                 .hover-bg-slate-100:hover { background-color: #f1f5f9 !important; }
                 .hover-text-primary:hover { color: #0ea5e9 !important; }
                 ::-webkit-scrollbar { width: 8px; }
@@ -1363,6 +1687,10 @@ const CourseContent = () => {
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes popIn {
+                    0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+                    100% { opacity: 1; transform: translateX(-50%) scale(1); }
                 }
             `}</style>
         </div>

@@ -105,7 +105,7 @@ const Courses = () => {
         <div style={{ background: 'transparent', minHeight: '100vh', paddingBottom: '4rem' }}>
             {/* Header */}
             <div style={{ background: '#0f172a', color: 'white', padding: '3rem 0 5rem' }}>
-                <div className="container" style={{ textAlign: 'center', maxWidth: '800px' }}>
+                <div className="container">
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }}>Explore Courses</h1>
                     <div style={{ position: 'relative', maxWidth: '500px', margin: '0 auto' }}>
                         <input 
@@ -130,7 +130,7 @@ const Courses = () => {
             </div>
 
             {/* Main Content with Sidebar */}
-            <div className="container" style={{ marginTop: '-3rem', display: 'flex', gap: '2rem', alignItems: 'flex-start', maxWidth: '1600px' }}>
+            <div className="container" style={{ marginTop: '-3rem', display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
                 
                 {/* Visual Sidebar for Filters */}
                 <div className="card" style={{ width: '300px', padding: '1.5rem', position: 'sticky', top: '2rem', flexShrink: 0, maxHeight: '80vh', overflowY: 'auto' }}>

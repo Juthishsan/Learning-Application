@@ -35,6 +35,8 @@ const InstructorCourses = () => {
         title: '', description: '', instructor: user?.name || '', price: '', category: '', thumbnail: ''
     });
     const [thumbnailFile, setThumbnailFile] = useState(null);
+    const [thumbnailUrl, setThumbnailUrl] = useState('');
+    const [thumbnailMode, setThumbnailMode] = useState('file'); // 'file' or 'url'
     const [isUploading, setIsUploading] = useState(false);
     const [errors, setErrors] = useState({});
     const [confirmModal, setConfirmModal] = useState({
@@ -106,8 +108,10 @@ const InstructorCourses = () => {
             formDataPayload.append('instructorId', user.id || user._id);
             formDataPayload.append('price', formData.price);
             formDataPayload.append('category', formData.category);
-            if (thumbnailFile) {
+            if (thumbnailMode === 'file' && thumbnailFile) {
                 formDataPayload.append('thumbnail', thumbnailFile);
+            } else if (thumbnailMode === 'url' && thumbnailUrl) {
+                formDataPayload.append('thumbnail', thumbnailUrl);
             }
 
             const response = await fetch('http://localhost:5000/api/courses', {
@@ -120,6 +124,7 @@ const InstructorCourses = () => {
             setIsModalOpen(false);
             setFormData({ title: '', description: '', instructor: user.name, price: '', category: '', thumbnail: '' });
             setThumbnailFile(null);
+            setThumbnailUrl('');
             fetchCourses();
             toast.success('Course created successfully!');
         } catch (error) {
@@ -145,6 +150,13 @@ const InstructorCourses = () => {
             thumbnail: course.thumbnail || ''
         });
         setThumbnailFile(null);
+        if (course.thumbnail && (course.thumbnail.startsWith('http'))) {
+            setThumbnailUrl(course.thumbnail);
+            setThumbnailMode('url');
+        } else {
+            setThumbnailUrl('');
+            setThumbnailMode('file');
+        }
         setIsEditModalOpen(true);
     };
 
@@ -173,8 +185,10 @@ const InstructorCourses = () => {
             formDataPayload.append('instructor', formData.instructor);
             formDataPayload.append('price', formData.price);
             formDataPayload.append('category', formData.category);
-            if (thumbnailFile) {
+            if (thumbnailMode === 'file' && thumbnailFile) {
                 formDataPayload.append('thumbnail', thumbnailFile);
+            } else if (thumbnailMode === 'url' && thumbnailUrl) {
+                formDataPayload.append('thumbnail', thumbnailUrl);
             }
 
             const response = await fetch(`http://localhost:5000/api/courses/${editingId}`, {
@@ -394,9 +408,66 @@ const InstructorCourses = () => {
                             </div>
                             <div>
                                 <label style={labelStyle}>Course Thumbnail</label>
-                                <input type="file" onChange={e => setThumbnailFile(e.target.files[0])} accept="image/*" style={{ ...inputStyle, padding: '0.5rem', background: 'white' }} disabled={isUploading} />
-                                {formData.thumbnail && !thumbnailFile && typeof formData.thumbnail === 'string' && formData.thumbnail.startsWith('http') && (
-                                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>Current thumbnail: <a href={formData.thumbnail} target="_blank" rel="noopener noreferrer">View</a></div>
+                                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setThumbnailMode('file')}
+                                        style={{ 
+                                            flex: 1, 
+                                            padding: '0.6rem', 
+                                            borderRadius: '10px', 
+                                            border: '1px solid', 
+                                            borderColor: thumbnailMode === 'file' ? '#4f46e5' : '#e2e8f0',
+                                            background: thumbnailMode === 'file' ? '#eff6ff' : 'white',
+                                            color: thumbnailMode === 'file' ? '#4f46e5' : '#64748b',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Upload File
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setThumbnailMode('url')}
+                                        style={{ 
+                                            flex: 1, 
+                                            padding: '0.6rem', 
+                                            borderRadius: '10px', 
+                                            border: '1px solid', 
+                                            borderColor: thumbnailMode === 'url' ? '#4f46e5' : '#e2e8f0',
+                                            background: thumbnailMode === 'url' ? '#eff6ff' : 'white',
+                                            color: thumbnailMode === 'url' ? '#4f46e5' : '#64748b',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Image URL
+                                    </button>
+                                </div>
+
+                                {thumbnailMode === 'file' ? (
+                                    <input type="file" onChange={e => setThumbnailFile(e.target.files[0])} accept="image/*" style={{ ...inputStyle, padding: '0.5rem', background: 'white' }} disabled={isUploading} />
+                                ) : (
+                                    <input 
+                                        placeholder="Paste image address (e.g. https://...)" 
+                                        value={thumbnailUrl} 
+                                        onChange={e => setThumbnailUrl(e.target.value)} 
+                                        style={inputStyle} 
+                                        disabled={isUploading} 
+                                    />
+                                )}
+
+                                {(thumbnailFile || thumbnailUrl) && (
+                                    <div style={{ marginTop: '1rem', position: 'relative', width: '100%', height: '120px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                                        <img 
+                                            src={thumbnailMode === 'file' ? URL.createObjectURL(thumbnailFile) : thumbnailUrl} 
+                                            alt="Preview" 
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/400x225?text=Invalid+Image+URL'; }}
+                                        />
+                                    </div>
                                 )}
                             </div>
                             <div>

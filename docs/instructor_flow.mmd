@@ -1,0 +1,51 @@
+graph TD
+    linkStyle default stroke:#000000,stroke-width:4px;
+    classDef default fill:#ffffff,stroke:#000000,stroke-width:4px,color:#000000,font-size:18px,font-weight:bold;
+    classDef startEnd fill:#ffffff,stroke:#000000,stroke-width:5px,color:#000000,rx:30,ry:30,font-size:20px,font-weight:bold;
+    classDef decision fill:#ffffff,stroke:#000000,stroke-width:4px,color:#000000,font-size:18px,font-weight:bold;
+    classDef aiProcess fill:#ffffff,stroke:#000000,stroke-width:4px,color:#000000,font-size:18px,font-weight:bold;
+
+    Start((Start)):::startEnd --> Visit[Visit Learning Portal]
+    Visit --> Login[Login via Secure Authentication]
+    Login --> CheckRole{Role ==<br/>Instructor?}:::decision
+    
+    CheckRole -- No --> Deny[Access Denied] --> End2((End)):::startEnd
+    CheckRole -- Yes --> Dash[Access Instructor Dashboard]
+    
+    Dash --> Path1[Profile Management]
+    Dash --> Path2[Course Content Management]
+    Dash --> Path3[Analytics & Grading]
+
+    Path1 --> Bio[Update Bio, Expertise & Designation]
+    Bio --> Avatar[Upload Resume/Avatar to Cloudinary]
+
+    Path2 --> Action{Action<br/>Type?}:::decision
+    Action -- Create New --> NewC[Input Title, Description & Price]
+    NewC --> Thumb[Upload Course Thumbnail]
+    Action -- Update Existing --> SelC[Select Existing Course]
+    Thumb --> UploadMenu[Access Content Uploader]
+    SelC --> UploadMenu
+    
+    UploadMenu --> ContType{Content<br/>Upload Type?}:::decision
+    ContType -- Video --> UpVid[Upload MP4 File to Cloudinary]
+    UpVid --> AI1[Trigger Groq Whisper API]:::aiProcess
+    AI1 --> Save1[Save Timestamped Transcript to Database]
+
+    ContType -- PDF --> UpPDF[Upload PDF Study Material]
+    UpPDF --> AI2[Trigger LLaMA API for Quizzes]:::aiProcess
+    AI2 --> Save2[Review & Save 10 AI-Generated Questions]
+
+    ContType -- Assignment --> UpAss[Create Assignment Instructions & Deadlines]
+
+    Path3 --> Gradebook[Open Gradebook Modal]
+    Gradebook --> Review[Review Student Progress & Submissions]
+    Review --> NeedGrade{Needs Manual<br/>Grading?}:::decision
+    NeedGrade -- Yes --> ManGrade[View Uploaded Files & Input Score]
+    NeedGrade -- No --> AutoGrade[Review Automated Quiz Scores]
+
+    Avatar --> End((End)):::startEnd
+    Save1 --> End
+    Save2 --> End
+    UpAss --> End
+    ManGrade --> End
+    AutoGrade --> End

@@ -3,6 +3,7 @@ import { LayoutDashboard, Users, LogOut, Settings, GraduationCap, User, IndianRu
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../Modals/ConfirmModal';
+import Logo from '../../assets/EroSkillupAcademy.jpg';
 
 const AdminSidebar = () => {
     const location = useLocation();
@@ -62,16 +63,18 @@ const AdminSidebar = () => {
             <div style={{ padding: '2.5rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
-                        background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)', 
+                        height: '45px', 
+                        width: '45px', // Square bounds for consistency
                         borderRadius: '12px', 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(234, 88, 12, 0.4)'
+                        overflow: 'hidden',
+                        background: 'white',
+                        padding: '4px', // Slight padding if logo touches the borders
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.1)'
                     }}>
-                        <Shield size={22} color="white" strokeWidth={2.5} />
+                        <img src={Logo} alt="Logo" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     </div>
                     <div>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>EroSkillUp</h2>

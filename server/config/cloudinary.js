@@ -47,4 +47,16 @@ const submissionStorage = new CloudinaryStorage({
 });
 const submissionUpload = multer({ storage: submissionStorage });
 
-module.exports = { upload, courseUpload, submissionUpload, cloudinary };
+const reviewStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'course_reviews',
+        resource_type: 'image',
+        allowed_formats: ['jpg', 'png', 'jpeg'],
+        public_id: (req, file) => `review_${req.params.id}_${Date.now()}_${file.originalname.split('.')[0]}`
+    }
+});
+const reviewUpload = multer({ storage: reviewStorage });
+
+module.exports = { upload, courseUpload, submissionUpload, reviewUpload, cloudinary };
+

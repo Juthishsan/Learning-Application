@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import ConfirmModal from '../Modals/ConfirmModal';
+import Logo from '../../assets/EroSkillupAcademy.jpg';
 
 const InstructorSidebar = () => {
     const location = useLocation();
@@ -62,16 +63,18 @@ const InstructorSidebar = () => {
             <div style={{ padding: '2.5rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
-                        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', 
+                        height: '45px', 
+                        width: '45px', 
                         borderRadius: '12px', 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)'
+                        overflow: 'hidden',
+                        background: 'white',
+                        padding: '4px',
+                        boxShadow: '0 4px 12px rgba(255, 255, 255, 0.1)'
                     }}>
-                        <BookOpen size={22} color="white" strokeWidth={2.5} />
+                        <img src={Logo} alt="Logo" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     </div>
                     <div>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>EroSkillUp</h2>

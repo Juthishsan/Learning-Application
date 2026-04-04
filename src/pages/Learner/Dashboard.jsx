@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, Clock, Award, BarChart2, Settings, LogOut, Play, Compass, Filter, CheckCircle, AlertCircle, FileText, ArrowRight, HelpCircle, Bell, Search, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Clock, Award, BarChart2, Settings, LogOut, Play, Compass, Filter, CheckCircle, AlertCircle, FileText, ArrowRight, HelpCircle, Bell, Search, Calendar, ShieldCheck, Brain, Target, Shield, Activity, Zap, Info, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PersonalizationModal from '../../components/Modals/PersonalizationModal';
 import ConfirmModal from '../../components/Modals/ConfirmModal';
 import toast from 'react-hot-toast';
-
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import CertificateModal from '../../components/Learner/CertificateModal';
+import Logo from '../../assets/EroSkillupAcademy.jpg';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -17,6 +18,15 @@ const Dashboard = () => {
   const [assignmentTab, setAssignmentTab] = useState('assignments');
   const [showUnenrollConfirm, setShowUnenrollConfirm] = useState(false);
   const [courseToUnenroll, setCourseToUnenroll] = useState(null);
+  
+  // Certificate States
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [certData, setCertData] = useState(null);
+  const [isCertLoading, setIsCertLoading] = useState(false);
+
+  // AI Insights States
+  const [insights, setInsights] = useState(null);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(false);
 
 
   useEffect(() => {
@@ -27,9 +37,27 @@ const Dashboard = () => {
          const userId = userData.id || userData._id;
          if (userId) {
              fetchEnrolledCourses(userId);
+             fetchLearningInsights(userId);
          }
      }
   }, []);
+
+  const fetchLearningInsights = async (userId) => {
+      setIsInsightsLoading(true);
+      try {
+          const res = await fetch(`http://localhost:5000/api/ai/learning-insights`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId })
+          });
+          const data = await res.json();
+          if (res.ok) setInsights(data);
+      } catch (err) {
+          console.error("Failed to fetch AI insights");
+      } finally {
+          setIsInsightsLoading(false);
+      }
+  };
 
   const fetchEnrolledCourses = async (userId) => {
       try {
@@ -69,6 +97,27 @@ const Dashboard = () => {
     } catch (err) {
         console.error(err);
         toast.error('Unenrollment failed');
+    }
+  };
+
+  const fetchCertificateData = async (courseId) => {
+    setIsCertLoading(true);
+    try {
+        const userId = user.id || user._id;
+        const res = await fetch(`http://localhost:5000/api/users/${userId}/courses/${courseId}/certificate`);
+        const data = await res.json();
+        
+        if (res.ok) {
+            setCertData(data);
+            setIsCertModalOpen(true);
+        } else {
+            toast.error(data.msg || "Certificate data unavailable.");
+        }
+    } catch (err) {
+        console.error(err);
+        toast.error("Failed to generate certificate preview.");
+    } finally {
+        setIsCertLoading(false);
     }
   };
 
@@ -181,33 +230,128 @@ const Dashboard = () => {
         return (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' }}>
              
-             {/* Left Column: Stats & Courses */}
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                 
-                 {/* Stats Grid */}
-                <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: '#1e293b' }}>Overview</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+              {/* Left Column: Stats & Courses */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                  
+                  {/* AI Learning Insights Card */}
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    style={{
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                        borderRadius: '24px',
+                        padding: '2rem',
+                        color: 'white',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
+                     {/* Decorative Gradients */}
+                     <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(79, 70, 229, 0.3) 0%, transparent 70%)', borderRadius: '50%' }} />
+                     
+                     <div style={{ position: 'relative', zIndex: 1 }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
+                                <Brain size={28} className="text-indigo-400" />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>AI Learning Analytics</h3>
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Zap size={12} fill="#94a3b8" /> Real-time Performance Analysis
+                                </div>
+                            </div>
+                         </div>
+
+                         {isInsightsLoading ? (
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
+                                 <RefreshCw size={24} className="animate-spin text-indigo-400" />
+                                 <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Synthesizing your achievement data...</p>
+                             </div>
+                         ) : insights ? (
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                 
+                                 {/* Overview Stats */}
+                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                                     <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.25rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '0.5px' }}>Assessment</div>
+                                        <div style={{ fontSize: '0.9rem', fontWeight: 500, color: '#f1f5f9', lineHeight: 1.5 }}>{insights.overallAssessment}</div>
+                                     </div>
+                                     <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.25rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.5px' }}>Pace & Prediction</div>
+                                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: insights.learningPace === 'Ahead' ? '#10b981' : insights.learningPace === 'Behind' ? '#f43f5e' : '#f59e0b', lineHeight: 1 }}>
+                                            {insights.learningPace}
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.5rem', fontWeight: 500 }}>
+                                            Predicted: <span style={{ color: '#cbd5e1' }}>{insights.predictedCompletion}</span>
+                                        </div>
+                                     </div>
+                                 </div>
+
+                                 {/* Detailed Insights */}
+                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                     <div>
+                                         <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: '#bfc9d4', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}><Target size={14} /> Key Strengths</h4>
+                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                             {insights.strengths.slice(0, 3).map((s, i) => (
+                                                 <div key={i} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                                     {s}
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </div>
+                                     <div>
+                                         <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: '#bfc9d4', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}><Info size={14} /> Attention Needed</h4>
+                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                             {insights.weakAreas.slice(0, 3).map((w, i) => (
+                                                 <div key={i} style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(244, 63, 94, 0.2)' }}>
+                                                     {w}
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 <div style={{ background: 'rgba(79, 70, 229, 0.08)', borderRadius: '16px', padding: '1.25rem', border: '1px solid rgba(79, 70, 229, 0.15)' }}>
+                                     <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a5b4fc', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Zap size={14} fill="#a5b4fc" /> Smart Strategy</h4>
+                                     <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                                         {insights.studyTips[0]}
+                                     </p>
+                                 </div>
+                             </div>
+                         ) : (
+                            <div style={{ textAlign: 'center', padding: '1rem 0', color: '#64748b', fontSize: '0.9rem' }}>
+                                Insights will appear once you engage with more course content.
+                            </div>
+                         )}
+                     </div>
+                  </motion.div>
+
+                  {/* Stats Grid */}
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.5rem', color: '#1e293b' }}>Global Progress Overview</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
                         {stats.map((stat, idx) => (
                             <motion.div 
                                 whileHover={{ y: -5 }}
                                 key={idx} 
                                 className="card" 
-                                style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: '20px', background: 'white', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}
+                                style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', borderRadius: '20px', background: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', border: '1px solid #f1f5f9' }}
                             >
                                 <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     {stat.icon}
                                 </div>
                                 <div>
                                     <h4 style={{ fontSize: '1.75rem', fontWeight: 800, lineHeight: 1, color: '#0f172a', marginBottom: '0.25rem' }}>{stat.value}</h4>
-                                    <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>{stat.label}</p>
+                                    <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>{stat.label}</p>
                                 </div>
                             </motion.div>
                         ))}
                     </div>
                 </div>
 
-                {/* Continue Learning */}
+                  {/* Continue Learning */}
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Continue Learning</h3>
@@ -596,29 +740,131 @@ const Dashboard = () => {
         );
 
       case 'achievements':
+        const completedCoursesList = enrolledCourses.filter(c => c.progress === 100);
+        
         return (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: '#1e293b' }}>Your Achievements</h2>
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
-                 
-                 <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem', border: '1px solid #e2e8f0', background: 'white', borderRadius: '24px', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ width: '100px', height: '100px', background: '#f1f5f9', borderRadius: '50%', margin: '0 auto 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                       <Award size={48} color="#94a3b8" />
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+             
+             {/* Achievement Stats */}
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                <div style={{ padding: '2rem', background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', borderRadius: '24px', color: 'white', boxShadow: '0 10px 20px -5px rgba(30, 64, 175, 0.3)' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, opacity: 0.8, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Global Rank</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900 }}>#42</div>
+                    <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '100px', width: 'fit-content' }}>
+                        Top 5% this month
                     </div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }}>Course Finisher</h3>
-                    <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>Complete your first course to unlock this badge.</p>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '6px', background: '#e2e8f0' }}></div>
-                 </div>
-                 
-                 <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem', borderRadius: '24px', background: 'white', border: '1px solid #fef3c7', boxShadow: '0 20px 25px -5px rgba(245, 158, 11, 0.1)', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '100px', height: '100px', background: '#fef3c7', borderRadius: '50%', opacity: 0.5 }}></div>
-                    <div style={{ width: '100px', height: '100px', background: 'white', borderRadius: '50%', margin: '0 auto 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #fffbeb', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.2)' }}>
-                       <Award size={48} color="#f59e0b" fill="#fef3c7" />
+                </div>
+                <div style={{ padding: '2rem', background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Skill Points</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a' }}>2,450</div>
+                    <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#10b981', fontWeight: 600 }}>
+                        <ArrowRight size={16} style={{ transform: 'rotate(-45deg)' }} /> +150 this week
                     </div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>Fast Starter</h3>
-                    <p style={{ fontSize: '0.95rem', color: '#64748b' }}>Enrolled in {enrolledCourses.length} courses! Great start.</p>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '6px', background: 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)' }}></div>
-                 </div>
+                </div>
+                <div style={{ padding: '2rem', background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Certificates</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a' }}>{completedCoursesList.length}</div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#64748b' }}>
+                        Certified Mastery
+                    </div>
+                </div>
+             </div>
+
+             {/* Earned Badges Section */}
+             <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Award size={24} color="#4f46e5" /> Academic Badges
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                    
+                    <motion.div 
+                        whileHover={{ scale: 1.02 }}
+                        style={{ textAlign: 'center', padding: '2.5rem 2rem', border: '2px dashed #e2e8f0', background: '#f8fafc', borderRadius: '24px', position: 'relative', overflow: 'hidden', opacity: coursesCompleted > 0 ? 1 : 0.6 }}
+                    >
+                        <div style={{ width: '80px', height: '80px', background: coursesCompleted > 0 ? '#dcfce7' : '#f1f5f9', borderRadius: '50%', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                        <Award size={40} color={coursesCompleted > 0 ? '#10b981' : '#94a3b8'} />
+                        </div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: coursesCompleted > 0 ? '#1e293b' : '#94a3b8', marginBottom: '0.5rem' }}>Course Finisher</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>{coursesCompleted > 0 ? "You've mastered your first course!" : "Complete your first course to unlock."}</p>
+                    </motion.div>
+                    
+                    <motion.div 
+                        whileHover={{ scale: 1.02 }}
+                        style={{ textAlign: 'center', padding: '2.5rem 2rem', borderRadius: '24px', background: '#fffbeb', border: '1px solid #fef3c7', boxShadow: '0 10px 15px -3px rgba(245, 158, 11, 0.1)', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ width: '80px', height: '80px', background: 'white', borderRadius: '50%', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #fffbeb', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.15)' }}>
+                        <Award size={40} color="#f59e0b" fill="#fef3c7" />
+                        </div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>Fast Starter</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Enrolled in {enrolledCourses.length} courses! Great momentum.</p>
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: '#f59e0b' }}></div>
+                    </motion.div>
+
+                    <motion.div 
+                        whileHover={{ scale: 1.02 }}
+                        style={{ textAlign: 'center', padding: '2.5rem 2rem', borderRadius: '24px', background: '#e0e7ff', border: '1px solid #c7d2fe', position: 'relative', overflow: 'hidden', opacity: avgScore >= 90 ? 1 : 0.6 }}>
+                        <div style={{ width: '80px', height: '80px', background: 'white', borderRadius: '50%', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #e0e7ff' }}>
+                        <Award size={40} color="#4f46e5" fill="#e0e7ff" />
+                        </div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: avgScore >= 90 ? '#1e293b' : '#94a3b8', marginBottom: '0.5rem' }}>Eagle Eye</h3>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>{avgScore >= 90 ? "Maintained a 90%+ average score!" : "Reach 90% average score to unlock."}</p>
+                    </motion.div>
+                </div>
+             </div>
+
+             {/* COURSE CERTIFICATES SECTION */}
+             <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}><ShieldCheck size={24} color="#10b981" /> Verified Certificates</div>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b', background: '#f1f5f9', padding: '4px 12px', borderRadius: '100px' }}>{completedCoursesList.length} Earned</span>
+                </h3>
+
+                {completedCoursesList.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
+                        {completedCoursesList.map((enrollment, idx) => (
+                            <motion.div 
+                                key={idx}
+                                whileHover={{ y: -5 }}
+                                style={{
+                                    background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column'
+                                }}
+                            >
+                                <div style={{ height: '160px', background: 'linear-gradient(45deg, #1e40af, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                    <Award size={64} color="white" style={{ opacity: 0.3 }} />
+                                    <div style={{ position: 'absolute', bottom: '1.5rem', left: '1.5rem', right: '1.5rem', color: 'white' }}>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.25rem', opacity: 0.9 }}>Official Certificate</div>
+                                        <div style={{ fontSize: '1.1rem', fontWeight: 800, lineHeight: 1.2 }}>{enrollment.courseId?.title}</div>
+                                    </div>
+                                </div>
+                                <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                        <div style={{ color: '#64748b' }}>Instructor: <span style={{ fontWeight: 600, color: '#1e293b' }}>{enrollment.courseId?.instructor}</span></div>
+                                        <div style={{ color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={14} /> Verified</div>
+                                    </div>
+                                    <button 
+                                        onClick={() => fetchCertificateData(enrollment.courseId?._id)}
+                                        disabled={isCertLoading}
+                                        style={{
+                                            width: '100%', padding: '0.85rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#1e293b', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                                    >
+                                        <FileText size={18} /> {isCertLoading ? 'Verifying...' : 'View Certificate'}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                ) : (
+                    <div style={{ padding: '4rem 2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '24px', border: '2px dashed #e2e8f0' }}>
+                        <div style={{ width: '64px', height: '64px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                            <ShieldCheck size={32} color="#94a3b8" />
+                        </div>
+                        <h4 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>No Certificates Yet</h4>
+                        <p style={{ fontSize: '0.95rem', color: '#64748b', maxWidth: '400px', margin: '0 auto 1.5rem' }}>Complete a course to 100% to earn your official verified certificate.</p>
+                        <button onClick={() => setActiveTab('mycourses')} style={{ padding: '0.75rem 1.5rem', borderRadius: '10px', background: '#4f46e5', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Finish Courses</button>
+                    </div>
+                )}
              </div>
           </motion.div>
         );
@@ -658,8 +904,8 @@ const Dashboard = () => {
       {/* Sidebar */}
       <aside style={{ width: '280px', background: '#fff', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', boxShadow: '1px 0 0 #f1f5f9', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }} className="hidden-mobile">
         <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0.5rem' }}>
-          <div style={{ width: '40px', height: '40px', background: '#4f46e5', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-            <BookOpen size={24} strokeWidth={2.5} />
+          <div style={{ width: '50px', height: '50px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '2px' }}>
+            <img src={Logo} alt="EroSkillUp Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1 }}>EroSkillUp</h2>
@@ -766,6 +1012,13 @@ const Dashboard = () => {
             cancelText="Cancel"
             isDestructive={true}
             icon={LogOut}
+        />
+
+        {/* Certificate Modal Overlay */}
+        <CertificateModal 
+            isOpen={isCertModalOpen} 
+            onClose={() => setIsCertModalOpen(false)} 
+            certData={certData} 
         />
       </main>
 

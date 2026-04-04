@@ -3,7 +3,7 @@ const router = express.Router();
 const Course = require('../models/Course');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
-const { courseUpload, cloudinary } = require('../config/cloudinary');
+const { courseUpload, reviewUpload, cloudinary } = require('../config/cloudinary');
 const { Groq } = require('groq-sdk');
 const pdfParse = require('pdf-parse');
 const axios = require('axios');
@@ -444,6 +444,40 @@ router.delete('/:id/content/:contentId', async (req, res) => {
     }
 });
 
+// @route   POST api/courses/:id/content/bulk-delete
+// @desc    Bulk delete content items
+router.post('/:id/content/bulk-delete', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ msg: 'Course not found' });
+
+        const { contentIds } = req.body;
+        if (!Array.isArray(contentIds)) return res.status(400).json({ msg: 'contentIds must be an array' });
+
+        // Try to delete from Cloudinary for each item being deleted
+        const itemsToDelete = course.content.filter(item => contentIds.includes(item._id.toString()));
+        
+        for (const item of itemsToDelete) {
+             if (item.public_id) {
+                  try {
+                       const resourceType = item.type === 'video' ? 'video' : 'image';
+                       await cloudinary.uploader.destroy(item.public_id, { resource_type: resourceType });
+                  } catch (cloudErr) {
+                       console.error("Cloudinary Bulk Deletion Error:", cloudErr);
+                  }
+             }
+        }
+
+        course.content = course.content.filter(item => !contentIds.includes(item._id.toString()));
+        await course.save();
+
+        res.json(course.content);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   GET api/courses/:id/gradebook
 // @desc    Get all students and their grades for a course
 router.get('/:id/gradebook', async (req, res) => {
@@ -616,4 +650,161 @@ router.post('/:id/quizzes/generate', courseUpload.single('file'), async (req, re
     }
 });
 
+// --- AI SYLLABUS GENERATION ---
+// Route: POST /api/courses/:id/generate-syllabus-preview
+router.post('/:id/generate-syllabus-preview', async (req, res) => {
+    try {
+        if (!process.env.GROQ_API_KEY) {
+            return res.status(400).json({ msg: 'GROQ_API_KEY missing in server .env' });
+        }
+
+        const course = await Course.findById(req.params.id);
+        if (!course) {
+            return res.status(404).json({ msg: 'Course not found' });
+        }
+
+        const topic = req.body.topic || course.title;
+
+        // Extract existing module titles to avoid duplication
+        const existingModules = course.content.map(c => `- ${c.title}`).join('\n');
+        const contextStr = existingModules.length > 0 
+            ? `\nIMPORTANT: The course ALREADY HAS the following modules:\n${existingModules}\n\nDO NOT generate any modules that duplicate or overlap with the above list. Generate completely NEW, subsequent lessons that continue the curriculum.` 
+            : '';
+
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        
+        const prompt = `
+            You are an expert instructional designer and syllabus builder. 
+            The instructor wants to create a comprehensive course syllabus for the topic: "${topic}".
+            The course description is: "${course.description}".
+            ${contextStr}
+            
+            Generate a structured curriculum consisting of exactly 6-10 new modules (lessons).
+            Make sure to include a mix of BOTH "video" lessons and "pdf" (reading/study document) lessons.
+            
+            RULES for the "description" field:
+            - If type is "video", write a detailed, engaging paragraph (3-4 sentences) explaining exactly what the student will learn. 
+            - If type is "pdf", leave the description completely empty ("").
+
+            Return ONLY a valid JSON object with a single key "modules" containing an array of objects:
+            {
+              "modules": [
+                {
+                  "title": "Module Title",
+                  "description": "Detailed video description (or empty string if pdf)",
+                  "type": "video" // or "pdf"
+                }
+              ]
+            }
+        `;
+
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.7,
+            response_format: { type: "json_object" }
+        });
+
+        const aiResponse = JSON.parse(completion.choices[0].message.content);
+        let generatedModules = aiResponse.modules;
+
+        if (!Array.isArray(generatedModules)) {
+             return res.status(500).json({ msg: 'AI returned malformed syllabus structure.' });
+        }
+
+        // Just return the generated modules for preview
+        const newContents = generatedModules.map(mod => ({
+            _id: 'draft_' + Math.random().toString(36).substr(2, 9), // Temp ID for React keys
+            title: mod.title,
+            description: mod.description,
+            type: mod.type === 'pdf' ? 'pdf' : 'video',
+        }));
+
+        res.json(newContents);
+
+    } catch (err) {
+        console.error("AI Syllabus Generation Error:", err.message);
+        res.status(500).json({ msg: 'Server error generating syllabus', error: err.message });
+    }
+});
+
+// Route: POST /api/courses/:id/save-syllabus
+router.post('/:id/save-syllabus', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) {
+            return res.status(404).json({ msg: 'Course not found' });
+        }
+
+        const { modules } = req.body;
+        if (!Array.isArray(modules)) {
+             return res.status(400).json({ msg: 'Modules array required' });
+        }
+
+        // Add them to the course content
+        const newContents = modules.map(mod => ({
+            title: mod.title,
+            description: mod.description,
+            type: mod.type || 'video',
+        }));
+
+        course.content.push(...newContents);
+        await course.save();
+
+        res.json(course.content);
+
+    } catch (err) {
+        console.error("Save Syllabus Error:", err.message);
+        res.status(500).json({ msg: 'Server error saving syllabus', error: err.message });
+    }
+});
+
+// @route   POST /api/courses/:id/reviews
+// @desc    Add review
+// @access  Private
+router.post('/:id/reviews', reviewUpload.array('images', 5), async (req, res) => {
+  const { rating, comment, userId, userName } = req.body;
+
+  try {
+    const course = await Course.findById(req.params.id);
+
+    if (course) {
+      const alreadyReviewed = course.reviews.find(
+        (r) => r.user.toString() === userId.toString()
+      );
+
+      if (alreadyReviewed) {
+        return res.status(400).json({ msg: 'Course already reviewed' });
+      }
+
+      const images = req.files ? req.files.map(file => file.path) : [];
+
+      const review = {
+        name: userName,
+        rating: Number(rating),
+        comment,
+        user: userId,
+        images,
+      };
+
+      course.reviews.push(review);
+
+      course.numReviews = course.reviews.length;
+
+      course.rating =
+        course.reviews.reduce((acc, item) => item.rating + acc, 0) /
+        course.reviews.length;
+
+      await course.save();
+      res.status(201).json({ msg: 'Review added' });
+    } else {
+      res.status(404).json({ msg: 'Course not found' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;
+

@@ -13,7 +13,7 @@ const About = () => {
         <div style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: '4rem' }}>
             {/* Hero Section */}
             <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', padding: '6rem 0' }}>
-                <div className="container" style={{ textAlign: 'center', maxWidth: '800px' }}>
+                <div className="container" style={{ textAlign: 'center' }}>
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}

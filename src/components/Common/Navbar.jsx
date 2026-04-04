@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../Modals/ConfirmModal';
+import Logo from '../../assets/EroSkillupAcademy.jpg';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -189,20 +190,11 @@ const Navbar = () => {
             boxShadow: scrolled ? '0 4px 6px -1px rgba(0, 0, 0, 0.05)' : 'none'
         }}
     >
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', maxWidth: '1280px', margin: '0 auto' }}>
+      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         
         {/* Logo */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
-          <div style={{ 
-              background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)', 
-              padding: '8px', 
-              borderRadius: '12px', 
-              color: 'white', 
-              display: 'flex',
-              boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.3)' 
-          }}>
-            <BookOpen size={22} strokeWidth={2.5} />
-          </div>
+          <img src={Logo} alt="EroSkillUp Academy Logo" style={{ height: '42px', objectFit: 'contain', borderRadius: '8px' }} />
           <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>
             Ero<span style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>SkillUp</span>
           </span>

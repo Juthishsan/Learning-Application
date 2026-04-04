@@ -514,4 +514,74 @@ router.put('/:userId/password', async (req, res) => {
     }
 });
 
+// @route   GET api/users/:userId/courses/:courseId/certificate
+// @desc    Get data for a completion certificate
+// @access  Private
+router.get('/:userId/courses/:courseId/certificate', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId).select('name email enrolledCourses');
+        const course = await Course.findById(req.params.courseId).select('title instructor content quizzes assignments');
+
+        if (!user || !course) return res.status(404).json({ msg: 'User or Course not found' });
+
+        const enrollment = user.enrolledCourses.find(
+            e => e.courseId.toString() === req.params.courseId
+        );
+
+        if (!enrollment) return res.status(404).json({ msg: 'Not enrolled in this course' });
+
+        // Ensure 100% completion
+        calculateAndSetProgress(enrollment, course);
+        if (enrollment.progress < 100) {
+            return res.status(400).json({ msg: 'Course not yet completed. Please finish all content and pass all assessments (80% score required).' });
+        }
+
+        // --- Use AI to generate a professional citation ---
+        let aiCitation = `This certificate recognizes the successful completion of all requirements for the course "${course.title}".`;
+        
+        if (process.env.GROQ_API_KEY) {
+            try {
+                const { Groq } = require('groq-sdk');
+                const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+                
+                const prompt = `
+                    You are the principal of EroSkillUp E-Learning Academy. 
+                    Write a professional, 2-sentence "Citation of Achievement" for a student named "${user.name}" who has successfully completed the "${course.title}" course with 100% progress.
+                    The citation should be formal, encouraging, and highlight their newfound expertise.
+                    Return ONLY the text of the citation, no other characters.
+                `;
+
+                const chatCompletion = await groq.chat.completions.create({
+                    messages: [{ role: "user", content: prompt }],
+                    model: "llama-3.3-70b-versatile",
+                    temperature: 0.7,
+                });
+                
+                aiCitation = chatCompletion.choices[0].message.content.trim();
+            } catch (aiErr) {
+                console.error("AI Citation Error:", aiErr.message);
+                // Fallback to default
+            }
+        }
+
+        const crypto = require('crypto');
+        const certificateId = `CERT-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${req.params.userId.slice(-4).toUpperCase()}`;
+
+        res.json({
+            userName: user.name,
+            courseTitle: course.title,
+            instructorName: course.instructor,
+            date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            certificateId,
+            verificationUrl: `https://eroskillup.com/verify/${certificateId}`,
+            citation: aiCitation
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
+

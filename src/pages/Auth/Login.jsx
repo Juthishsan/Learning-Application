@@ -3,6 +3,7 @@ import { Mail, Lock, BookOpen, ArrowRight, Eye, EyeOff, AlertCircle } from 'luci
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import Logo from '../../assets/EroSkillupAcademy.jpg';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -90,8 +91,8 @@ const Login = () => {
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{ width: '56px', height: '56px', background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.3)' }}>
-             <BookOpen color="white" size={28} />
+          <div style={{ width: '64px', height: '64px', background: 'white', border: '1px solid #f1f5f9', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)', overflow: 'hidden', padding: '4px' }}>
+             <img src={Logo} alt="EroSkillUp Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: '1.875rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem', letterSpacing: '-0.5px' }}>Welcome Back</h1>
           <p style={{ color: '#64748b', fontSize: '1rem' }}>Please enter your details to sign in.</p>

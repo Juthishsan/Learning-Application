@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Award, Users, PlayCircle, Zap } from 'lucide-react';
+import { ArrowRight, Award, Users, PlayCircle, Zap, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import CourseCard from '../../components/Common/CourseCard';
@@ -48,9 +48,6 @@ const Hero = () => {
             </div>
 
             <div className="container" style={{ 
-                maxWidth: '1280px', 
-                margin: '0 auto', 
-                padding: '0 2rem', 
                 position: 'relative', 
                 zIndex: 10,
                 width: '100%'
@@ -177,7 +174,7 @@ const Hero = () => {
 const Features = () => {
     return (
         <section style={{ padding: '6rem 2rem', background: '#f8fafc' }}>
-            <div className="container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+            <div className="container">
                 <div style={{ textAlign: 'center', maxWidth: '700px', margin: '0 auto 4rem auto' }}>
                     <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>Why Choose EroSkillUp?</h2>
                     <p style={{ color: '#64748b', fontSize: '1.1rem' }}>We combine cutting-edge technology with expert-led pedagogy to deliver a learning experience that truly works.</p>
@@ -209,21 +206,100 @@ const Features = () => {
 
 const Home = () => {
     const [trendingCourses, setTrendingCourses] = useState([]);
+    const [recommendedCourses, setRecommendedCourses] = useState([]);
+    const [aiLoading, setAiLoading] = useState(false);
+    const userSnapshot = JSON.parse(localStorage.getItem('user'));
 
     useEffect(() => {
+        // Fetch Trending
         fetch('http://localhost:5000/api/courses')
             .then(res => res.json())
-            .then(data => setTrendingCourses(data.slice(0, 3)))
+            .then(data => setTrendingCourses(data.slice(0, 4)))
             .catch(err => console.error("Failed to load courses", err));
+
+        // Fetch AI Recommendations
+        if (userSnapshot) {
+            setAiLoading(true);
+            fetch('http://localhost:5000/api/ai/recommendations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userSnapshot.id || userSnapshot._id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                setRecommendedCourses(data);
+                setAiLoading(false);
+            })
+            .catch(err => {
+                console.error("AI fetch failed", err);
+                setAiLoading(false);
+            });
+        }
     }, []);
 
     return (
         <div style={{ fontFamily: "'Inter', sans-serif" }}>
             <Hero />
             
-            
+            {/* AI Personalized Recommendations */}
+            {userSnapshot && (
+                <section style={{ padding: '6rem 2rem', background: 'linear-gradient(to bottom, #ffffff, #f5f3ff)' }}>
+                    <div className="container">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '3rem' }}>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#7c3aed', fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '1px' }}>
+                                    <Sparkles size={18} fill="#7c3aed" /> Personalized for You
+                                </div>
+                                <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>AI-Powered Matches</h2>
+                                <p style={{ color: '#64748b', fontSize: '1.1rem' }}>Based on your background, interests, and professional goals.</p>
+                            </div>
+                        </div>
+
+                        {aiLoading ? (
+                            <div style={{ padding: '4rem', textAlign: 'center' }}>
+                                <div className="loading-spinner" style={{ margin: '0 auto 1.5rem' }}></div>
+                                <p style={{ color: '#64748b', fontWeight: 500 }}>AI is analyzing your profile...</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+                                {recommendedCourses.length > 0 ? (
+                                    recommendedCourses.map(course => (
+                                        <div key={course._id} style={{ position: 'relative' }}>
+                                            <div style={{ 
+                                                position: 'absolute', 
+                                                top: '15px', 
+                                                right: '15px', 
+                                                zIndex: 10, 
+                                                background: 'rgba(124, 58, 237, 0.9)', 
+                                                color: 'white', 
+                                                padding: '5px 12px', 
+                                                borderRadius: '50px', 
+                                                fontSize: '0.7rem', 
+                                                fontWeight: 800,
+                                                backdropFilter: 'blur(4px)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)'
+                                            }}>
+                                                <Sparkles size={12} fill="white" /> 98% MATCH
+                                            </div>
+                                            <CourseCard course={course} />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', background: 'white', borderRadius: '24px', border: '1px dashed #e2e8f0' }}>
+                                        <h3 style={{ color: '#64748b' }}>Complete your profile to unlock personalized AI recommendations!</h3>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
+
             <section style={{ padding: '6rem 2rem', background: 'white' }}>
-                 <div className="container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+                 <div className="container">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '3rem' }}>
                         <div>
                             <h2 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>Trending Courses</h2>
