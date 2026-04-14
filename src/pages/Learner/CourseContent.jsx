@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { PlayCircle, FileText, CheckCircle, ChevronLeft, Menu, Lock, Download, ChevronRight, Video, File, HelpCircle, Check, X as XIcon, RefreshCw, Trophy, ArrowRight, Clock, AlertCircle, Calendar, Search, Plus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { 
+    ChevronLeft, Play, FileText, CheckCircle, Lock, Download, 
+    MoreVertical, Search, Clock, Award, BookOpen, Send, 
+    Plus, PlayCircle, Trash2, Camera, User, 
+    MessageSquare, ThumbsUp, AtSign, Filter, ChevronDown, 
+    X as XIcon, RefreshCw, Trophy, ArrowRight, Calendar, HelpCircle,
+    Check, Menu
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import CustomVideoPlayer from '../../components/Learner/CustomVideoPlayer';
 import CertificateModal from '../../components/Learner/CertificateModal';
@@ -55,8 +62,18 @@ const CourseContent = () => {
     const [mixedContent, setMixedContent] = useState([]);
     
     // AI Smart Search States
-    const [videoInfoTab, setVideoInfoTab] = useState('overview'); // overview, notes, resources, search
+    const [videoInfoTab, setVideoInfoTab] = useState('overview'); // overview, search, notes, discussions
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Discussion States
+    const [discussions, setDiscussions] = useState([]);
+    const [isDiscussionLoading, setIsDiscussionLoading] = useState(false);
+    const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+    const [newPost, setNewPost] = useState({ title: '', content: '', category: 'General' });
+    const [activeDiscussion, setActiveDiscussion] = useState(null); // When viewing a single thread
+    const [replyText, setReplyText] = useState('');
+    const [discussionsFilter, setDiscussionsFilter] = useState('All');
+
     const [videoSeek, setVideoSeek] = useState(0);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [currentVideoTime, setCurrentVideoTime] = useState(0);
@@ -277,6 +294,7 @@ const CourseContent = () => {
                 }
                 
                 setLoading(false);
+                fetchDiscussions();
             } catch (err) {
                 console.error("Failed to load course content", err);
                 setLoading(false);
@@ -285,6 +303,87 @@ const CourseContent = () => {
 
         fetchCourseAndCheckEnrollment();
     }, [id, navigate]);
+
+    const fetchDiscussions = async () => {
+        setIsDiscussionLoading(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/discussions/${id}`);
+            const data = await res.json();
+            if (res.ok) setDiscussions(data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsDiscussionLoading(false);
+        }
+    };
+
+    const createDiscussion = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch(`http://localhost:5000/api/discussions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    courseId: id,
+                    title: newPost.title,
+                    content: newPost.content,
+                    category: newPost.category,
+                    author: user.id || user._id,
+                    authorName: user.name
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setDiscussions([data, ...discussions]);
+                setIsCreatePostModalOpen(false);
+                setNewPost({ title: '', content: '', category: 'General' });
+                toast.success("Discussion post created!");
+            }
+        } catch (err) {
+            toast.error("Failed to post discussion");
+        }
+    };
+
+    const postReply = async (discussionId) => {
+        if (!replyText.trim()) return;
+        try {
+            const res = await fetch(`http://localhost:5000/api/discussions/${discussionId}/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    author: user.id || user._id,
+                    authorName: user.name,
+                    content: replyText
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setDiscussions(discussions.map(d => d._id === discussionId ? data : d));
+                if (activeDiscussion?._id === discussionId) setActiveDiscussion(data);
+                setReplyText('');
+                toast.success("Reply posted!");
+            }
+        } catch (err) {
+            toast.error("Failed to post reply");
+        }
+    };
+
+    const toggleLike = async (discussionId) => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/discussions/${discussionId}/like`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id || user._id })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setDiscussions(discussions.map(d => d._id === discussionId ? data : d));
+                if (activeDiscussion?._id === discussionId) setActiveDiscussion(data);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     // Check for saved state when key changes
     useEffect(() => {
@@ -301,16 +400,6 @@ const CourseContent = () => {
         if (activeContent.type === 'quiz' && activeContent.questions) {
              setCurrentQuiz(activeContent.questions);
         } else {
-             // Fallback for old hardcoded assignments or empty ones
-             // For "assignments" that are just text submissions in real life, we might treat differently
-             // But based on request, assignments have questions too? 
-             // The schema for Assignment didn't have questions, only Quizzes had questions.
-             // If Assignment is just a "Task", we might just show the description.
-             // BUT, if the user wants "Assignments related questions" similar to quizzes...
-             // Let's assume for now Quizzes are the interactive ones.
-             // If activeContent is Assignment (Task), we might just mark as complete.
-             
-             // However, for consistency with previous code, let's treat Quizzes as the interactive Q&A.
              setCurrentQuiz([]);
         }
         setUserAnswers({});
@@ -329,11 +418,7 @@ const CourseContent = () => {
         let correctCount = 0;
         // For Quizzes
         currentQuiz.forEach((q, idx) => {
-            // Need to handle if correct answer is index or string. Schema said Number (index)
-            // But previous hardcoded was string.
-            // Let's adapt. The schema created in previous turn uses `correctAnswer: Number`.
             const correctOptIndex = q.correctAnswer; 
-            // userAnswers values ? If we store the option STRING, we need to compare with q.options[correctOptIndex]
             if (userAnswers[idx] === q.options[correctOptIndex]) {
                 correctCount++;
             }
@@ -347,7 +432,7 @@ const CourseContent = () => {
             const endpoint = activeContent.type === 'quiz' ? 'quiz' : 'assignment';
             const body = activeContent.type === 'quiz' 
                 ? { quizId: activeContent._id || activeContent.quizId, score: finalScore }
-                : { assignmentId: activeContent._id || activeContent.assignmentId, score: finalScore }; // Assignments might not be graded automatically if they are just tasks, but reusing logic.
+                : { assignmentId: activeContent._id || activeContent.assignmentId, score: finalScore };
 
             await fetch(`http://localhost:5000/api/users/${user.id || user._id}/courses/${id}/${endpoint}`, {
                 method: 'POST',
@@ -404,7 +489,6 @@ const CourseContent = () => {
             if (res.ok) {
                 const data = await res.json();
                 setCompletedContent(data.completedContent);
-                // Also could update global progress state if we had one
                 const isNowComplete = data.completedContent.includes(contentId);
                 toast(isNowComplete ? 'Marked as completed' : 'Marked as incomplete', { icon: isNowComplete ? '✅' : '↩️' });
             }
@@ -437,7 +521,6 @@ const CourseContent = () => {
 
             if (res.ok) {
                  const data = await res.json();
-                 // Update savedAssignments
                  const updatedAssignment = data.assignments.find(a => a.assignmentId === assignId);
                  setSavedAssignments(prev => ({
                      ...prev,
@@ -485,17 +568,12 @@ const CourseContent = () => {
     const handleTranscribe = async () => {
         setIsTranscribing(true);
         try {
-            // In a real app, this would call a backend AI service (e.g. Groq/AssemblyAI)
-            // For now, we'll simulate the AI processing and provide a sample transcript
-            // if one doesn't exist on the content object.
-            
             const res = await fetch(`http://localhost:5000/api/courses/${id}/content/${activeContent._id}/transcribe`, {
                 method: 'POST'
             });
             
             if (res.ok) {
                 const updatedContent = await res.json();
-                // Update the active content and course state with the new transcript
                 const newCourse = { ...course };
                 const contentIdx = newCourse.content.findIndex(c => c._id === activeContent._id);
                 if (contentIdx !== -1) {
@@ -579,7 +657,6 @@ const CourseContent = () => {
                     flexDirection: 'column',
                     transition: 'width 0.3s ease',
                     overflow: 'hidden',
-                    flexShrink: 0,
                     flexShrink: 0,
                     position: 'relative',
                 }}
@@ -1362,6 +1439,12 @@ const CourseContent = () => {
                                                 >
                                                     Notes
                                                 </button>
+                                                <button 
+                                                    onClick={() => setVideoInfoTab('discussions')}
+                                                    style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', borderBottom: videoInfoTab === 'discussions' ? '2px solid #2563eb' : '2px solid transparent', color: videoInfoTab === 'discussions' ? '#2563eb' : '#64748b', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                >
+                                                    <MessageSquare size={16} /> Discussions
+                                                </button>
                                             </div>
 
                                             {/* Note Selection Popup */}
@@ -1463,12 +1546,147 @@ const CourseContent = () => {
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <div style={{ textAlign: 'center', padding: '4rem 2rem', background: '#f8fafc', borderRadius: '12px', border: '2px dashed #e2e8f0' }}>
-                                                            <div style={{ width: '60px', height: '60px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', color: '#94a3b8' }}>
-                                                                <FileText size={24} />
+                                                        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#94a3b8' }}>
+                                                            <FileText size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                                            <p style={{ margin: 0 }}>You haven't saved any notes for this lesson yet.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {videoInfoTab === 'discussions' && (
+                                                <div style={{ animation: 'fadeIn 0.3s' }}>
+                                                    {activeDiscussion ? (
+                                                        /* Thread View */
+                                                        <div>
+                                                            <button 
+                                                                onClick={() => setActiveDiscussion(null)}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: '#2563eb', fontWeight: 600, cursor: 'pointer', marginBottom: '1.5rem' }}
+                                                            >
+                                                                <ChevronLeft size={16} /> Back to all discussions
+                                                            </button>
+
+                                                            <div style={{ background: '#f8fafc', padding: '2rem', borderRadius: '24px', border: '1px solid #f1f5f9', marginBottom: '2rem' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                                                    <div style={{ padding: '4px 10px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
+                                                                        {activeDiscussion.category}
+                                                                    </div>
+                                                                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Posted by {activeDiscussion.authorName} • {new Date(activeDiscussion.createdAt).toLocaleDateString()}</span>
+                                                                </div>
+                                                                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>{activeDiscussion.title}</h2>
+                                                                <p style={{ color: '#475569', lineHeight: 1.6, fontSize: '1.05rem', margin: 0 }}>{activeDiscussion.content}</p>
+                                                                
+                                                                <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                                                    <button 
+                                                                        onClick={() => toggleLike(activeDiscussion._id)}
+                                                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: activeDiscussion.likes.includes(user.id || user._id) ? '#3b82f6' : '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}
+                                                                    >
+                                                                        <ThumbsUp size={18} fill={activeDiscussion.likes.includes(user.id || user._id) ? "currentColor" : "none"} /> 
+                                                                        {activeDiscussion.likes.length} Likes
+                                                                    </button>
+                                                                </div>
                                                             </div>
-                                                            <h4 style={{ color: '#1e293b', margin: '0 0 0.5rem' }}>No notes yet</h4>
-                                                            <p style={{ color: '#64748b', fontSize: '0.9rem', maxWidth: '300px', margin: '0 auto' }}>Select any text in the transcript to save it as a note for quick reference later.</p>
+
+                                                            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
+                                                                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.5rem' }}>Replies {activeDiscussion.replies.length > 0 && `(${activeDiscussion.replies.length})`}</h4>
+                                                                
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+                                                                    {activeDiscussion.replies.map((reply, i) => (
+                                                                        <div key={i} style={{ padding: '1.25rem', border: '1px solid #f1f5f9', borderRadius: '16px', background: 'white' }}>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>
+                                                                                    {reply.authorName.charAt(0)}
+                                                                                </div>
+                                                                                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0f172a' }}>{reply.authorName}</span>
+                                                                                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>• {new Date(reply.createdAt).toLocaleDateString()}</span>
+                                                                            </div>
+                                                                            <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.5, margin: 0 }}>{reply.content}</p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+
+                                                                {/* Reply Form */}
+                                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', background: '#f8fafc', padding: '1.5rem', borderRadius: '20px' }}>
+                                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, flexShrink: 0 }}>
+                                                                        {user.name?.charAt(0)}
+                                                                    </div>
+                                                                    <div style={{ flex: 1 }}>
+                                                                        <textarea 
+                                                                            placeholder="Post a helpful reply..."
+                                                                            value={replyText}
+                                                                            onChange={(e) => setReplyText(e.target.value)}
+                                                                            style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', minHeight: '100px', resize: 'none', fontSize: '0.95rem', marginBottom: '1rem', outline: 'none' }}
+                                                                        />
+                                                                        <button 
+                                                                            onClick={() => postReply(activeDiscussion._id)}
+                                                                            style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                                        >
+                                                                            <Send size={16} /> Post Reply
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        /* Main Forum View */
+                                                        <div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                                                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Discussions</h3>
+                                                                <button 
+                                                                    onClick={() => setIsCreatePostModalOpen(true)}
+                                                                    style={{ background: '#2563eb', color: 'white', padding: '0.6rem 1.25rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)' }}
+                                                                >
+                                                                    <Plus size={18} /> Create post
+                                                                </button>
+                                                            </div>
+
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', borderBottom: '1px solid #f1f5f9', marginBottom: '2rem' }}>
+                                                                {['All', 'General', 'Help', 'Strategy'].map(f => (
+                                                                    <button 
+                                                                        key={f}
+                                                                        onClick={() => setDiscussionsFilter(f)}
+                                                                        style={{ paddingBottom: '1rem', background: 'none', border: 'none', borderBottom: discussionsFilter === f ? '2px solid #2563eb' : '2px solid transparent', color: discussionsFilter === f ? '#2563eb' : '#64748b', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                                    >
+                                                                        {f === 'All' ? 'All forums' : f}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+
+                                                            {isDiscussionLoading ? (
+                                                                <div style={{ textAlign: 'center', padding: '3rem' }}><RefreshCw className="animate-spin text-blue-500" /></div>
+                                                            ) : (
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                                    {discussions
+                                                                        .filter(d => discussionsFilter === 'All' || d.category === discussionsFilter)
+                                                                        .map(disc => (
+                                                                        <div 
+                                                                            key={disc._id}
+                                                                            onClick={() => setActiveDiscussion(disc)}
+                                                                            style={{ padding: '1.5rem', background: 'white', border: '1px solid #f1f5f9', borderRadius: '18px', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                                                                            onMouseOver={e=>e.currentTarget.style.borderColor = '#3b82f6'}
+                                                                            onMouseOut={e=>e.currentTarget.style.borderColor = '#f1f5f9'}
+                                                                        >
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                                                                <div style={{ padding: '4px 10px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800 }}>
+                                                                                    {disc.category}
+                                                                                </div>
+                                                                                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{disc.authorName} • {new Date(disc.createdAt).toLocaleDateString()}</span>
+                                                                            </div>
+                                                                            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>{disc.title}</h4>
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', color: '#64748b', fontSize: '0.85rem' }}>
+                                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MessageSquare size={14} /> {disc.replies.length} replies</span>
+                                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ThumbsUp size={14} /> {disc.likes.length} likes</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                    {discussions.length === 0 && (
+                                                                        <div style={{ textAlign: 'center', padding: '4rem 0', color: '#94a3b8' }}>
+                                                                            <MessageSquare size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                                                            <p>No discussions in this forum yet. Be the first to start a conversation!</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -1693,6 +1911,88 @@ const CourseContent = () => {
                     100% { opacity: 1; transform: translateX(-50%) scale(1); }
                 }
             `}</style>
+
+            {/* Create Post Modal */}
+            <AnimatePresence>
+                {isCreatePostModalOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            style={{ background: 'white', width: '100%', maxWidth: '600px', borderRadius: '24px', padding: '2.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Create a new post</h2>
+                                <button onClick={() => setIsCreatePostModalOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><XIcon size={24} /></button>
+                            </div>
+
+                            <form onSubmit={createDiscussion}>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, color: '#475569', fontSize: '0.9rem' }}>Title*</label>
+                                    <input 
+                                        type="text"
+                                        required
+                                        placeholder="Write a descriptive title"
+                                        value={newPost.title}
+                                        onChange={(e) => setNewPost({...newPost, title: e.target.value})}
+                                        style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '1rem' }}
+                                    />
+                                </div>
+
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, color: '#475569', fontSize: '0.9rem' }}>Forum Category*</label>
+                                    <select 
+                                        required
+                                        value={newPost.category}
+                                        onChange={(e) => setNewPost({...newPost, category: e.target.value})}
+                                        style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '1rem', background: 'white' }}
+                                    >
+                                        <option value="General">General</option>
+                                        <option value="Help">Help & Support</option>
+                                        <option value="Strategy">Strategy & Tips</option>
+                                        {mixedContent.filter(c => c.type === 'module-header').map((m, i) => (
+                                            <option key={i} value={m.title}>{m.title}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, color: '#475569', fontSize: '0.9rem' }}>Body*</label>
+                                    <textarea 
+                                        required
+                                        placeholder="Provide supporting details or context..."
+                                        value={newPost.content}
+                                        onChange={(e) => setNewPost({...newPost, content: e.target.value})}
+                                        style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '1rem', minHeight: '150px', resize: 'none' }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsCreatePostModalOpen(false)} 
+                                        style={{ background: 'white', color: '#475569', border: '1px solid #e2e8f0', padding: '0.85rem 2rem', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        type="submit"
+                                        style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.85rem 2rem', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                    >
+                                        Post
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

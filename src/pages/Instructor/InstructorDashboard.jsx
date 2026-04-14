@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Users, IndianRupee, TrendingUp, Star, Plus, Search, Bell, Calendar, ArrowRight, MessageSquare, MoreVertical, FileText, Settings, Video, CheckCircle, Clock, Zap, GraduationCap } from 'lucide-react';
+import { BookOpen, Users, IndianRupee, TrendingUp, Star, Plus, Search, Bell, Calendar, ArrowRight, MessageSquare, MoreVertical, FileText, Settings, Video, CheckCircle, Clock, Zap, GraduationCap, Brain, Activity, RefreshCw, Target, Info, ShieldCheck, BarChart2, MousePointer2 } from 'lucide-react';
 import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -78,8 +78,11 @@ const InstructorDashboard = () => {
     const [myCourses, setMyCourses] = useState([]);
     const [user, setUser] = useState({});
     const [showAnnounceModal, setShowAnnounceModal] = useState(false);
-
     const [pendingTasks, setPendingTasks] = useState([]);
+    
+    // AI Insights State
+    const [insights, setInsights] = useState(null);
+    const [isInsightsLoading, setIsInsightsLoading] = useState(false);
 
     useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem('user'));
@@ -174,7 +177,27 @@ const InstructorDashboard = () => {
         };
 
         fetchData();
+        if (storedUser) {
+            fetchInstructorInsights(storedUser.id || storedUser._id);
+        }
     }, []);
+
+    const fetchInstructorInsights = async (userId) => {
+        setIsInsightsLoading(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/ai/instructor-insights`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            });
+            const data = await res.json();
+            if (res.ok) setInsights(data);
+        } catch (err) {
+            console.error("Failed to fetch AI instructor insights");
+        } finally {
+            setIsInsightsLoading(false);
+        }
+    };
 
     const statCards = [
         { title: 'Total Revenue', value: `₹${stats.revenue.toLocaleString()}`, icon: <IndianRupee size={26} />, color: '#10b981', bg: '#dcfce7', trend: '+12.5%' },
@@ -237,6 +260,126 @@ const InstructorDashboard = () => {
                     {statCards.map((stat, index) => (
                         <StatCard key={index} {...stat} />
                     ))}
+                </motion.div>
+
+                {/* AI STRATEGIC INSIGHTS HERO SECTION */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    style={{
+                        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                        borderRadius: '32px',
+                        padding: '2.5rem',
+                        color: 'white',
+                        marginBottom: '3rem',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        boxShadow: '0 25px 50px -12px rgba(49, 46, 129, 0.25)',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                    }}
+                >
+                    {/* Abstract Decorative Elements */}
+                    <div style={{ position: 'absolute', top: '-100px', right: '-50px', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(40px)' }} />
+                    <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(79, 70, 229, 0.3) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(40px)' }} />
+
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div style={{ 
+                                    padding: '12px', 
+                                    background: 'rgba(255,255,255,0.1)', 
+                                    borderRadius: '16px', 
+                                    backdropFilter: 'blur(10px)',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
+                                }}>
+                                    <Brain size={32} className="text-indigo-300" />
+                                </div>
+                                <div>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>AI Instructor Analytics</h2>
+                                    <div style={{ fontSize: '0.85rem', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', fontWeight: 600 }}>
+                                        <Zap size={14} fill="#a5b4fc" /> Strategic Content Intelligence
+                                    </div>
+                                </div>
+                            </div>
+                            {/* <div style={{ fontSize: '0.9rem', color: '#c7d2fe', background: 'rgba(255,255,255,0.05)', padding: '6px 16px', borderRadius: '1000px', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600 }}>
+                                Llama 3.3 Analysis
+                            </div> */}
+                        </div>
+
+                        {isInsightsLoading ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '2rem 0' }}>
+                                <RefreshCw size={32} className="animate-spin text-indigo-300" />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <p style={{ color: '#c7d2fe', fontSize: '1.1rem', fontWeight: 600 }}>Generating Strategic Report...</p>
+                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Auditing course engagement and student trends across {stats.courses} courses.</p>
+                                </div>
+                            </div>
+                        ) : insights ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                
+                                {/* Insight Grid */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+                                    
+                                    {/* Engagement Summary */}
+                                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(5px)' }}>
+                                        <div style={{ color: '#a5b4fc', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Activity size={14} /> Engagement
+                                        </div>
+                                        <p style={{ fontSize: '0.95rem', lineHeight: 1.6, color: '#e2e8f0', margin: 0 }}>{insights.engagementOverview}</p>
+                                    </div>
+
+                                    {/* Content Health */}
+                                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(5px)' }}>
+                                        <div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <MousePointer2 size={14} /> Top Content Hooks
+                                        </div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                            {insights.contentAnalysis.highEngagement.map((item, i) => (
+                                                <span key={i} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '4px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid rgba(16, 185, 129, 0.2)' }}>{item}</span>
+                                            ))}
+                                        </div>
+                                        <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+                                            Students are re-visiting these heavily.
+                                        </div>
+                                    </div>
+
+                                    {/* Assessment Analysis */}
+                                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(5px)' }}>
+                                        <div style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Target size={14} /> Quiz Health: <span style={{ color: '#ef4444' }}>{insights.assessmentHealth.difficultyRating}</span>
+                                        </div>
+                                        <p style={{ fontSize: '0.95rem', color: '#e2e8f0', margin: 0, fontStyle: 'italic' }}>"{insights.assessmentHealth.observation}"</p>
+                                    </div>
+                                </div>
+
+                                {/* Strategic Action Bar */}
+                                <div style={{ background: 'rgba(79, 70, 229, 0.1)', borderRadius: '24px', padding: '1.75rem', border: '1px solid rgba(79, 70, 229, 0.2)', display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#c7d2fe', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <Zap size={18} fill="#c7d2fe" /> Strategic Advice
+                                        </h4>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                                            {insights.strategicAdvice.map((tip, i) => (
+                                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#cbd5e1', fontSize: '0.9rem' }}>
+                                                    <div style={{ width: '4px', height: '4px', background: '#4f46e5', borderRadius: '50%' }} /> {tip}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '2rem' }}>
+                                        <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', marginBottom: '0.25rem' }}>Immediate Priority</div>
+                                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>{insights.nextSteps}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '3rem 0', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', color: '#94a3b8' }}>
+                                <BarChart2 size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                                <p>Engagement data is being collected. Publish or enroll more students to unlock AI insights.</p>
+                            </div>
+                        )}
+                    </div>
                 </motion.div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.1fr', gap: '2rem' }}>

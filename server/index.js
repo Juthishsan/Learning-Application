@@ -30,6 +30,7 @@ app.use('/api/cart', require('./routes/cart'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/discussions', require('./routes/discussions'));
 
 app.get('/', (req, res) => {
     res.send('API is running...');

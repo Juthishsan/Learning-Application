@@ -176,7 +176,7 @@ const Login = () => {
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#64748b', fontWeight: 500 }}>
               <input type="checkbox" style={{ accentColor: '#4f46e5', width: '16px', height: '16px' }} /> Remember me
             </label>
-            <a href="#" style={{ color: '#4f46e5', fontWeight: 600, textDecoration: 'none' }}>Forgot password?</a>
+            <Link to="/forgot-password" style={{ color: '#4f46e5', fontWeight: 600, textDecoration: 'none' }}>Forgot password?</Link>
           </div>
 
           <button 

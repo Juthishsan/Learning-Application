@@ -79,6 +79,8 @@ const UserSchema = new mongoose.Schema({
     instagram: { type: String, default: '' },
     youtube: { type: String, default: '' },
   },
+  resetPasswordToken: { type: String, default: null },
+  resetPasswordExpires: { type: Date, default: null },
   createdAt: {
     type: Date,
     default: Date.now,

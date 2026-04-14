@@ -6,6 +6,8 @@ import Footer from './components/Common/Footer'; // Import Footer
 import Home from './pages/Learner/Home';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
+import ForgotPassword from './pages/Auth/ForgotPassword';
+import ResetPassword from './pages/Auth/ResetPassword';
 import Dashboard from './pages/Learner/Dashboard';
 import UserProfile from './pages/Learner/UserProfile';
 import Courses from './pages/Learner/Courses';
@@ -79,6 +81,8 @@ function App() {
             <Route path="/" element={<div style={{paddingTop: '80px'}}><Home /></div>} />
             <Route path="/login" element={<div style={{paddingTop: '80px'}}><Login /></div>} />
             <Route path="/signup" element={<div style={{paddingTop: '80px'}}><Signup /></div>} />
+            <Route path="/forgot-password" element={<div style={{paddingTop: '80px'}}><ForgotPassword /></div>} />
+            <Route path="/reset-password/:token" element={<div style={{paddingTop: '80px'}}><ResetPassword /></div>} />
             <Route path="/dashboard" element={<div style={{paddingTop: '80px'}}><Dashboard /></div>} />
             <Route path="/profile" element={<div style={{paddingTop: '0px'}}><UserProfile /></div>} />
             <Route path="/courses" element={<div style={{paddingTop: '80px'}}><Courses /></div>} />
