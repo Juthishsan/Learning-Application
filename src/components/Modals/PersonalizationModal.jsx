@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, Check, Briefcase, Layers, Code, Database, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -86,22 +87,21 @@ const PersonalizationModal = ({ isOpen, onClose, user, onUpdate }) => {
 
     if (!isOpen) return null;
 
-    return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)' }}>
+    return createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)' }}>
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="card"
-                style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', padding: 0, background: 'var(--bg-card)', border: '1px solid #334155' }}
+                style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', padding: 0, background: 'white', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', position: 'relative' }}
             >
                 {/* Header */}
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', position: 'sticky', top: 0, zIndex: 10 }}>
                     <div>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)' }}>Customize Your Experience</h2>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Step {step} of 3</p>
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>Customize Your Experience</h2>
+                        <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Step {step} of 3</p>
                     </div>
-                    <button onClick={onClose} style={{ padding: '0.5rem', borderRadius: '50%', background: '#f1f5f9', color: '#64748b' }}>
+                    <button onClick={onClose} style={{ padding: '0.5rem', borderRadius: '50%', background: '#f1f5f9', color: '#64748b', border: 'none', cursor: 'pointer' }}>
                         <X size={20} />
                     </button>
                 </div>
@@ -238,7 +238,8 @@ const PersonalizationModal = ({ isOpen, onClose, user, onUpdate }) => {
                     )}
                 </div>
             </motion.div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Eye, EyeOff, Save, Key, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -66,8 +67,8 @@ const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
 
     if (!isOpen) return null;
 
-    return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)' }}>
+    return createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)' }}>
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -156,7 +157,8 @@ const ChangePasswordModal = ({ isOpen, onClose, userId }) => {
                     </div>
                 </form>
             </motion.div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

@@ -110,7 +110,7 @@ const Navbar = () => {
         if (storedUser) {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
-            fetchNotifications(parsedUser.id);
+            fetchNotifications(parsedUser.id || parsedUser._id);
         } else {
             setUser(null);
             setNotifications([]);
@@ -453,7 +453,7 @@ const Navbar = () => {
                                 <User size={18} />
                             )}
                           </div>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', paddingRight: '4px' }}>{user.name.split(' ')[0]}</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', paddingRight: '4px' }}>{user?.name?.split(' ')[0] || 'User'}</span>
                           <ChevronDown size={14} color='var(--text-light)' style={{ marginRight: '8px' }} />
                       </button>
 

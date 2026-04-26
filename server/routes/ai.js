@@ -234,6 +234,123 @@ router.post('/instructor-insights', async (req, res) => {
     }
 });
 
+router.post('/courses/:id/generate-summary', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!process.env.GROQ_API_KEY) {
+            return res.status(500).json({ error: 'GROQ_API_KEY missing.' });
+        }
+
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const course = await Course.findById(id);
+
+        if (!course) {
+            return res.status(404).json({ msg: 'Course not found' });
+        }
+
+        let courseDataTexts = `Course Title: ${course.title}\nDescription: ${course.description}\n\n`;
+        course.content.forEach(c => {
+            courseDataTexts += `Content Title: ${c.title}\n`;
+            if (c.description) courseDataTexts += `Details: ${c.description}\n`;
+            if (c.transcript && c.transcript.length > 0) {
+                courseDataTexts += `Transcript: ${c.transcript.map(t => t.text).join(' ')}\n`;
+            }
+            courseDataTexts += `\n`;
+        });
+
+        // Limit the input size to avoid token limit errors (Groq context limit depends on the exact model, usually 8k to 32k limits)
+        // Taking the first 25000 characters just to be safe.
+        if (courseDataTexts.length > 25000) {
+            courseDataTexts = courseDataTexts.substring(0, 25000) + '... [truncated]';
+        }
+
+        const systemPrompt = `
+            You are an expert AI teaching assistant.
+            Carefully read the provided course materials, which consist of video transcripts, course descriptions, and content summaries.
+            Summarize this entire course into key topics, important concepts, and revision notes.
+            Return a well-structured markdown document providing a comprehensive summary that students can use as revision notes.
+            Use headings (H2, H3), bullet points, and highlight key takeaways.
+            Do not include any greeting or conversational text, output ONLY the markdown content.
+        `;
+
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Course Material:\n\n${courseDataTexts}` }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.3,
+        });
+
+        const summary = chatCompletion.choices[0].message.content.trim();
+        res.json({ summary });
+
+    } catch (err) {
+        console.error('AI Summary Error:', err);
+        res.status(500).json({ error: 'Failed to generate course summary.' });
+    }
+});
+
+router.post('/courses/:courseId/content/:contentId/generate-summary', async (req, res) => {
+    try {
+        const { courseId, contentId } = req.params;
+
+        if (!process.env.GROQ_API_KEY) {
+            return res.status(500).json({ error: 'GROQ_API_KEY missing.' });
+        }
+
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const course = await Course.findById(courseId);
+
+        if (!course) {
+            return res.status(404).json({ msg: 'Course not found' });
+        }
+
+        const content = course.content.find(c => c._id.toString() === contentId);
+        
+        if (!content) {
+            return res.status(404).json({ msg: 'Content not found in course' });
+        }
+
+        let contentDataText = `Course Title: ${course.title}\nContent Title: ${content.title}\n`;
+        if (content.description) contentDataText += `Details: ${content.description}\n`;
+        if (content.transcript && content.transcript.length > 0) {
+            contentDataText += `Transcript: ${content.transcript.map(t => t.text).join(' ')}\n`;
+        }
+
+        if (contentDataText.length > 25000) {
+            contentDataText = contentDataText.substring(0, 25000) + '... [truncated]';
+        }
+
+        const systemPrompt = `
+            You are an expert AI teaching assistant.
+            Carefully read the provided material for this specific lesson/topic.
+            Summarize this lesson into key topics, important concepts, and revision notes.
+            If the transcript is provided, extract the most important points discussed.
+            Return a well-structured markdown document providing a comprehensive summary that students can use as revision notes.
+            Use headings (H2, H3), bullet points, and highlight key takeaways.
+            Do not include any greeting or conversational text, output ONLY the markdown content.
+        `;
+
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: `Lesson Material:\n\n${contentDataText}` }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.3,
+        });
+
+        const summary = chatCompletion.choices[0].message.content.trim();
+        res.json({ summary });
+
+    } catch (err) {
+        console.error('AI Single Content Summary Error:', err);
+        res.status(500).json({ error: 'Failed to generate lesson summary.' });
+    }
+});
+
 module.exports = router;
 
 

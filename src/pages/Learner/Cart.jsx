@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Trash2, AlertCircle, ShoppingCart, ArrowRight, ShieldCheck, Heart, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, ShoppingCart, ArrowRight, ShieldCheck, Heart, Star, ChevronDown, ChevronUp, Tag, Receipt, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../../styles/Cart.css';
@@ -64,6 +64,21 @@ const Cart = () => {
     const platformFee = 0;
     const totalPayable = subtotal + gst + platformFee;
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    };
+
     if (!user) {
         return (
             <div className="cart-page">
@@ -89,13 +104,14 @@ const Cart = () => {
             <section className="cart-hero">
                 <div className="cart-container">
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.7, ease: "easeOut" }}
                     >
                         <h1 className="cart-title">My Learning Cart</h1>
                         <p className="cart-subtitle">
-                            <ShoppingCart size={22} color="#4f46e5" />
-                            Review your <strong>{cartItems.length} course{cartItems.length !== 1 ? 's' : ''}</strong> and complete your enrollment
+                            <ShoppingCart size={20} strokeWidth={2.5} color="#5c38ed" />
+                            Review your <strong>{cartItems.length} course{cartItems.length !== 1 ? 's' : ''}</strong>
                         </p>
                     </motion.div>
                 </div>
@@ -105,32 +121,40 @@ const Cart = () => {
                 <div className="cart-container">
                     {cartItems.length === 0 ? (
                     <motion.div 
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5 }}
                         className="empty-cart-container"
                     >
-                        <div className="empty-icon">
-                            <ShoppingCart size={60} strokeWidth={1.5} />
+                        <div className="empty-icon-wrap">
+                            <div className="empty-icon-bg"></div>
+                            <div className="empty-icon">
+                                <ShoppingCart size={65} strokeWidth={1.5} />
+                            </div>
                         </div>
-                        <h2 className="empty-title">Your cart is feeling light</h2>
+                        <h2 className="empty-title">Your cart feels light</h2>
                         <p className="empty-desc">
-                            Looks like you haven't discovered your next favorite course yet. Start exploring our world-class catalog today!
+                            Discover new skills and elevate your career. Explore our premium courses and start learning today.
                         </p>
                         <Link to="/courses" className="explore-btn">
-                            Explore All Courses <ArrowRight size={22} />
+                            Explore Courses <ArrowRight size={20} />
                         </Link>
                     </motion.div>
                 ) : (
                     <div className="cart-content">
                         {/* Cart Items List */}
-                        <div className="cart-items-list">
+                        <motion.div 
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="show"
+                            className="cart-items-list"
+                        >
                             <AnimatePresence>
                                 {cartItems.map((item) => (
                                     <motion.div 
                                         key={item._id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -50, scale: 0.95 }}
+                                        variants={itemVariants}
+                                        exit={{ opacity: 0, x: -100, scale: 0.9 }}
                                         layout
                                         className="cart-item-card"
                                     >
@@ -147,33 +171,37 @@ const Cart = () => {
                                                     <h3 className="cart-item-title">{item.title}</h3>
                                                     <p className="cart-item-instructor">By <span>{item.instructor}</span></p>
                                                 </div>
-                                                <div className="cart-item-price">
-                                                    {item.price > 0 ? `₹${item.price}` : 'Free'}
+                                                <div className="cart-item-price-wrapper">
+                                                    <div className={`cart-item-price ${item.price === 0 ? 'free' : ''}`}>
+                                                        {item.price > 0 ? `₹${item.price}` : 'Free'}
+                                                    </div>
                                                 </div>
                                             </div>
                                             
                                             <div className="cart-item-footer">
                                                 <div className="cart-item-tags">
-                                                    <span className="tag tag-cat">{item.category}</span>
+                                                    <span className="tag tag-cat">{item.category || "Development"}</span>
                                                     {item.rating && (
                                                         <span className="tag tag-rate">
-                                                            <Star size={12} fill="#d97706" /> {item.rating}
+                                                            <Star size={12} fill="currentColor" /> {item.rating}
                                                         </span>
                                                     )}
                                                     <span className="tag tag-best">Bestseller</span>
                                                 </div>
                                                 <div className="cart-item-actions">
                                                     <button 
-                                                        className="btn-action btn-save"
+                                                        className="action-btn-icon save"
                                                         onClick={() => toast('Saved to wishlist!', { icon: '❤️' })}
+                                                        title="Save for Later"
                                                     >
-                                                        <Heart size={16} /> Save for Later
+                                                        <Heart size={18} />
                                                     </button>
                                                     <button 
                                                         onClick={() => removeFromCart(item._id)}
-                                                        className="btn-action btn-remove"
+                                                        className="action-btn-icon remove"
+                                                        title="Remove from Cart"
                                                     >
-                                                        <Trash2 size={16} /> Remove
+                                                        <Trash2 size={18} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -181,27 +209,33 @@ const Cart = () => {
                                     </motion.div>
                                 ))}
                             </AnimatePresence>
-                        </div>
+                        </motion.div>
 
                         {/* Summary Card */}
                         <div className="cart-summary-sticky">
                             <motion.div 
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
+                                initial={{ opacity: 0, x: 50 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.6, delay: 0.2 }}
                                 className="summary-card"
                             >
-                                <h3 className="summary-title">Order Summary</h3>
+                                <h3 className="summary-title">
+                                    <Receipt size={24} color="#5c38ed" />
+                                    Order Summary
+                                </h3>
                                 
                                 <div className="summary-row">
                                     <span>Subtotal</span>
-                                    <span style={{ fontWeight: 700, color: '#1e293b' }}>₹{subtotal.toFixed(2)}</span>
+                                    <span style={{ fontWeight: 700, color: '#0f172a' }}>₹{subtotal.toFixed(2)}</span>
                                 </div>
                                 
-                                <div className={`tax-box ${showTaxDetails ? 'active' : ''}`}>
+                                <div className="tax-box">
                                     <button className="tax-header" onClick={() => setShowTaxDetails(!showTaxDetails)}>
-                                        <span className="tax-title">Taxes & Fees</span>
+                                        <span className="tax-title">
+                                            <Tag size={16} /> Taxes & Fees
+                                        </span>
                                         <div className="tax-right">
-                                            <span className="tax-amount">+₹{gst.toFixed(2)}</span>
+                                            <span>+₹{gst.toFixed(2)}</span>
                                             {showTaxDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                         </div>
                                     </button>
@@ -227,33 +261,32 @@ const Cart = () => {
                                 </div>
 
                                 <div className="summary-row total">
-                                    <span>Total Payable</span>
+                                    <span>Total</span>
                                     <span>₹{totalPayable.toFixed(2)}</span>
                                 </div>
                                 
                                 <button className="checkout-btn" onClick={handleCheckoutClick}>
-                                    Proceed to Payment <ArrowRight size={22} />
+                                    Checkout <ArrowRight size={20} />
                                 </button>
 
                                 <div className="coupon-section">
                                     <div className="coupon-input-group">
-                                        <input type="text" placeholder="Enter coupon code" />
-                                        <button onClick={() => toast.error('Invalid coupon code')}>Apply</button>
+                                        <input type="text" placeholder="Promo code" />
+                                        <button onClick={() => toast.error('Invalid code')}>Apply</button>
                                     </div>
                                 </div>
 
                                 <div className="secure-info">
-                                    <ShieldCheck size={18} color="#10b981" />
-                                    <span>Secure 256-bit SSL encryption</span>
+                                    <ShieldCheck size={18} strokeWidth={2.5} />
+                                    <span>Guaranteed Safe & Secure Checkout</span>
                                 </div>
                                 
                                 <div className="payment-methods">
-                                    <p>We Accept</p>
+                                    <p>Supported Payments</p>
                                     <div className="method-icons">
-                                        <div className="icon-placeholder"></div>
-                                        <div className="icon-placeholder"></div>
-                                        <div className="icon-placeholder"></div>
-                                        <div className="icon-placeholder"></div>
+                                        <div className="icon-placeholder" title="Credit Card"><CreditCard size={20} /></div>
+                                        <div className="icon-placeholder" style={{fontSize: '0.8rem', fontWeight: 700}}>UPI</div>
+                                        <div className="icon-placeholder" style={{fontSize: '0.8rem', fontWeight: 700}}>NET</div>
                                     </div>
                                 </div>
                             </motion.div>

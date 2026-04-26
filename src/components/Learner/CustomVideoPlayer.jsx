@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, Settings, RotateCcw, RotateCw, Check } from 'lucide-react';
 
-const CustomVideoPlayer = ({ src, title, seekTo = 0, onTimeUpdate }) => {
+const CustomVideoPlayer = ({ src, title, seekTo = 0, onTimeUpdate, onEnded }) => {
     const videoRef = useRef(null);
     const containerRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -35,18 +35,21 @@ const CustomVideoPlayer = ({ src, title, seekTo = 0, onTimeUpdate }) => {
             if (onTimeUpdate) onTimeUpdate(video.currentTime);
         };
         const updateDuration = () => setDuration(video.duration);
-        const onEnded = () => setIsPlaying(false);
+        const handleEnded = () => {
+            setIsPlaying(false);
+            if (onEnded) onEnded();
+        };
 
         video.addEventListener('timeupdate', updateTime);
         video.addEventListener('loadedmetadata', updateDuration);
-        video.addEventListener('ended', onEnded);
+        video.addEventListener('ended', handleEnded);
 
         return () => {
             video.removeEventListener('timeupdate', updateTime);
             video.removeEventListener('loadedmetadata', updateDuration);
-            video.removeEventListener('ended', onEnded);
+            video.removeEventListener('ended', handleEnded);
         };
-    }, [onTimeUpdate]);
+    }, [onTimeUpdate, onEnded]);
 
     // Handle Source Change
     useEffect(() => {

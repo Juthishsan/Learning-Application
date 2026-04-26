@@ -6,8 +6,9 @@ import {
     Plus, PlayCircle, Trash2, Camera, User, 
     MessageSquare, ThumbsUp, AtSign, Filter, ChevronDown, 
     X as XIcon, RefreshCw, Trophy, ArrowRight, Calendar, HelpCircle,
-    Check, Menu
+    Check, Menu, Sparkles
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import CustomVideoPlayer from '../../components/Learner/CustomVideoPlayer';
@@ -64,6 +65,11 @@ const CourseContent = () => {
     // AI Smart Search States
     const [videoInfoTab, setVideoInfoTab] = useState('overview'); // overview, search, notes, discussions
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // AI Summary States
+    const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+    const [aiSummaryContent, setAiSummaryContent] = useState('');
+    const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
     
     // Discussion States
     const [discussions, setDiscussions] = useState([]);
@@ -384,6 +390,30 @@ const CourseContent = () => {
             console.error(err);
         }
     };
+    const generateAiSummary = async () => {
+        setIsSummaryModalOpen(true);
+        // Clean up previous context if changed
+        setAiSummaryContent('');
+        setAiSummaryLoading(true);
+        try {
+            const res = await fetch(`http://localhost:5000/api/ai/courses/${id}/content/${activeContent._id}/generate-summary`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setAiSummaryContent(data.summary);
+            } else {
+                toast.error(data.error || "Failed to generate summary");
+                setIsSummaryModalOpen(false);
+            }
+        } catch (err) {
+            toast.error("An error occurred");
+            setIsSummaryModalOpen(false);
+        } finally {
+            setAiSummaryLoading(false);
+        }
+    };
+
 
     // Check for saved state when key changes
     useEffect(() => {
@@ -474,6 +504,12 @@ const CourseContent = () => {
         }
     };
 
+    const handleVideoEnded = () => {
+        const isCompleted = activeContent ? completedContent.includes(activeContent._id || activeContent.assignmentId || activeContent.quizId) : false;
+        if (!isCompleted) {
+            toggleCompletion();
+        }
+    };
 
     const toggleCompletion = async () => {
         if (!activeContent || activeContent.type === 'assignment' || activeContent.type === 'quiz') return;
@@ -540,10 +576,22 @@ const CourseContent = () => {
     };
 
 
-    if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#334155' }}>Loading Class...</div>;
-    if (!course) return <div style={{ padding: '4rem', textAlign: 'center' }}>Course not found</div>;
 
     const isPdf = activeContent?.type === 'pdf' || (activeContent?.url && activeContent.url.endsWith('.pdf'));
+    const isCurrentContextCompleted = completedContent.includes(activeContent?._id);
+
+    useEffect(() => {
+        let timer;
+        if (isPdf && !isCurrentContextCompleted) {
+            timer = setTimeout(() => {
+                toggleCompletion();
+            }, 3000);
+        }
+        return () => clearTimeout(timer);
+    }, [isPdf, isCurrentContextCompleted, activeContent?._id]); 
+
+    if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#334155' }}>Loading Class...</div>;
+    if (!course) return <div style={{ padding: '4rem', textAlign: 'center' }}>Course not found</div>;
 
     // Filter contents
     const videoContents = mixedContent.filter(c => c.type === 'video');
@@ -561,8 +609,6 @@ const CourseContent = () => {
     if (activeContent?.type === 'quiz') savedData = savedQuizzes[activeContent._id];
 
     const hasPassed = savedData && savedData.score >= 80;
-
-    const isCurrentContextCompleted = completedContent.includes(activeContent?._id);
 
     // Smart Search Logic
     const handleTranscribe = async () => {
@@ -989,28 +1035,45 @@ const CourseContent = () => {
                     
                     {/* Completion Button */}
                     {activeContent?.type !== 'assignment' && activeContent?.type !== 'quiz' && (
-                        <button 
-                            onClick={toggleCompletion}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.5rem 1rem',
-                                background: isCurrentContextCompleted ? '#dcfce7' : 'white',
-                                border: isCurrentContextCompleted ? '1px solid #86efac' : '1px solid #cbd5e1',
-                                color: isCurrentContextCompleted ? '#15803d' : '#475569',
-                                borderRadius: '6px',
-                                fontSize: '0.9rem',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            {isCurrentContextCompleted ? (
-                                <> <CheckCircle size={18} /> Completed </>
-                            ) : (
-                                <> <CheckCircle size={18} /> Mark as Complete </>
-                            )}
-                        </button>
-                    )}
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        {(activeContent?.type === 'video' || activeContent?.type === 'pdf') && isCurrentContextCompleted && (
+                            <button 
+                                onClick={generateAiSummary}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    padding: '0.5rem 1rem',
+                                    background: 'linear-gradient(135deg, #a855f7, #7e22ce)',
+                                    border: 'none',
+                                    color: 'white',
+                                    borderRadius: '6px',
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 4px 6px rgba(168, 85, 247, 0.2)'
+                                }}
+                            >
+                                <Sparkles size={16} /> AI Summary
+                            </button>
+                        )}
+                        {isCurrentContextCompleted && (
+                            <div 
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    padding: '0.5rem 1rem',
+                                    background: '#dcfce7',
+                                    border: '1px solid #86efac',
+                                    color: '#15803d',
+                                    borderRadius: '6px',
+                                    fontSize: '0.9rem',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                <CheckCircle size={18} /> Completed 
+                            </div>
+                        )}
+                    </div>
+                )}
                 </div>
 
                 {/* Viewer */}
@@ -1406,6 +1469,7 @@ const CourseContent = () => {
                                                     title={activeContent.title}
                                                     seekTo={videoSeek}
                                                     onTimeUpdate={(time) => setCurrentVideoTime(time)}
+                                                    onEnded={handleVideoEnded}
                                                 />
                                             </div>
                                         </div>
@@ -1445,6 +1509,18 @@ const CourseContent = () => {
                                                 >
                                                     <MessageSquare size={16} /> Discussions
                                                 </button>
+                                            
+                                                {completedContent.some(id => mixedContent.some(c => c._id === id && (c.type === 'video' || c.type === 'pdf'))) && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            setVideoInfoTab('ai-summary');
+                                                            if(!aiSummaryContent) generateAiSummary();
+                                                        }}
+                                                        style={{ padding: '0 0.5rem 1rem', background: 'none', border: 'none', borderBottom: videoInfoTab === 'ai-summary' ? '2px solid #8b5cf6' : '2px solid transparent', color: videoInfoTab === 'ai-summary' ? '#8b5cf6' : '#64748b', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                                    >
+                                                        <Sparkles size={16} fill={videoInfoTab === 'ai-summary' ? '#8b5cf6' : 'none'} color={videoInfoTab === 'ai-summary' ? '#8b5cf6' : '#64748b'} /> AI Summary
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {/* Note Selection Popup */}
@@ -1692,6 +1768,37 @@ const CourseContent = () => {
                                                 </div>
                                             )}
 
+                                            {videoInfoTab === 'ai-summary' && (
+                                                <div style={{ animation: 'fadeIn 0.3s', padding: '1.5rem', background: '#faf5ff', borderRadius: '16px', border: '1px solid #e9d5ff' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                                                        <div style={{ width: '40px', height: '40px', background: '#d8b4fe', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b21a8' }}>
+                                                            <Sparkles size={24} fill="#6b21a8" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#4c1d95', margin: 0 }}>AI Course Summary</h3>
+                                                            <p style={{ margin: 0, color: '#7e22ce', fontSize: '0.9rem' }}>Generated from transcripts and study material</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {aiSummaryLoading ? (
+                                                        <div style={{ padding: '3.5rem', textAlign: 'center' }}>
+                                                            <div className="loading-spinner" style={{ margin: '0 auto 1.5rem', borderColor: '#d8b4fe', borderTopColor: '#7e22ce' }}></div>
+                                                            <p style={{ color: '#7e22ce', fontWeight: 600, fontSize: '1.1rem' }}>AI is extracting key concepts...</p>
+                                                            <p style={{ color: '#9333ea', fontSize: '0.85rem', marginTop: '0.5rem' }}>This might take a moment depending on the course size.</p>
+                                                        </div>
+                                                    ) : aiSummaryContent ? (
+                                                        <div className="markdown-body" style={{ color: '#4c1d95', lineHeight: 1.7, fontSize: '1.05rem', background: 'white', padding: '2rem', borderRadius: '12px', border: '1px solid #f3e8ff' }}>
+                                                            <ReactMarkdown>{aiSummaryContent}</ReactMarkdown>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ textAlign: 'center', padding: '3rem', color: '#9333ea' }}>
+                                                            <Sparkles size={40} style={{ opacity: 0.3, marginBottom: '1rem', color: '#a855f7' }} />
+                                                            <p>Failed to generate summary. Please try again later.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {videoInfoTab === 'search' && (
                                                 <div style={{ animation: 'fadeIn 0.3s' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
@@ -1728,7 +1835,6 @@ const CourseContent = () => {
                                                         ) : (
                                                             <div style={{ display: 'flex', gap: '1rem' }}>
                                                                 <button style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>View Notes</button>
-                                                                <button style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>Download PDF</button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1835,7 +1941,7 @@ const CourseContent = () => {
                                 ) : isPdf ? (
                                     <div style={{ flex: 1, background: '#525659', height: '100%', display: 'flex', flexDirection: 'column' }}>
                                         <iframe 
-                                            src={activeContent.url} 
+                                            src={`${activeContent.url}#toolbar=0`} 
                                             style={{ width: '100%', flex: 1, border: 'none', display: 'block' }} 
                                             title="PDF Viewer"
                                         />
@@ -1993,6 +2099,60 @@ const CourseContent = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            {/* AI Summary Modal */}
+            <AnimatePresence>
+                {isSummaryModalOpen && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }} onClick={() => setIsSummaryModalOpen(false)}></div>
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                            style={{ 
+                                position: 'relative', 
+                                background: 'white', 
+                                width: '90%', 
+                                maxWidth: '750px', 
+                                maxHeight: '85vh', 
+                                borderRadius: '24px', 
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+                            }}
+                        >
+                            <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#faf5ff' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{ width: '36px', height: '36px', background: '#d8b4fe', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b21a8' }}>
+                                        <Sparkles size={20} fill="#6b21a8" />
+                                    </div>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#4c1d95', margin: 0 }}>Lesson Notes by AI</h3>
+                                </div>
+                                <button onClick={() => setIsSummaryModalOpen(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex' }}>
+                                    <span style={{ fontSize: '24px', fontWeight: 'bold' }}>&times;</span>
+                                </button>
+                            </div>
+                            
+                            <div className="markdown-body" style={{ padding: '2rem', overflowY: 'auto', flex: 1, color: '#334155', lineHeight: 1.7 }}>
+                                {aiSummaryLoading ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 0' }}>
+                                        <RefreshCw className="animate-spin" size={40} color="#7e22ce" style={{ margin: "0 auto 1.5rem", animation: "spin 1s linear infinite" }} />
+                                        <p style={{ color: '#7e22ce', fontWeight: 600, fontSize: '1.1rem' }}>Analyzing lesson content...</p>
+                                        <p style={{ color: '#9333ea', fontSize: '0.85rem', marginTop: '0.5rem' }}>Extracting the most important concepts for you.</p>
+                                    </div>
+                                ) : aiSummaryContent ? (
+                                    <ReactMarkdown>{aiSummaryContent}</ReactMarkdown>
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '3rem', color: '#9333ea' }}>
+                                        <p>No summary could be generated.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 };

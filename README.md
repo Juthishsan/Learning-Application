@@ -1,70 +1,130 @@
-# Getting Started with Create React App
+# Comprehensive E-Learning Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-featured, AI-powered E-Learning Platform built with the MERN stack (MongoDB, Express.js, React.js, Node.js). This platform provides dedicated portals for Learners, Instructors, and Administrators, offering a seamless experience for course creation, enrollment, learning, and platform management.
 
-## Available Scripts
+## 🚀 Features
 
-In the project directory, you can run:
+### 🎓 Learner Portal
+* **Course Catalog & Search**: Browse, search, and discover a wide variety of courses.
+* **Interactive Learning**: Watch course videos, read materials, and track progress.
+* **AI Chatbot Assistant**: Integrated AI chatbot powered by Groq to assist with course queries.
+* **Cart & Checkout**: Add courses to the cart and securely purchase them via Razorpay/Stripe.
+* **Dashboard & Profile**: Track enrolled courses, learning progress, and manage personal information.
 
-### `npm start`
+### 👨‍🏫 Instructor Portal
+* **Course Management**: Create, update, and manage courses, modules, and lessons.
+* **Media Uploads**: Upload course thumbnails and video content seamlessly via Cloudinary.
+* **Student Tracking**: Monitor enrolled students and their progress.
+* **Earnings Dashboard**: Track course sales and total revenue.
+* **Profile Management**: Customize instructor profile and settings.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 🛡️ Admin Portal
+* **Global Dashboard**: View platform-wide analytics, total users, active courses, and revenue.
+* **User Management**: Manage learners and instructors on the platform.
+* **Financial Overview**: Detailed reports on earnings and platform fees.
+* **Platform Settings**: Configure global application settings.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🛠️ Tech Stack
 
-### `npm test`
+### Frontend
+* **React.js**: UI Library
+* **React Router**: Navigation
+* **Framer Motion**: Animations and transitions
+* **Recharts**: Data visualization and charts
+* **React Hot Toast**: Notifications
+* **Lucide React**: Iconography
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Backend
+* **Node.js & Express.js**: Server and API framework
+* **MongoDB & Mongoose**: Database and ODM
+* **Cloudinary & Multer**: File and media storage
+* **Groq SDK**: AI integration for the chatbot
+* **Razorpay / Stripe**: Payment gateway integration
 
-### `npm run build`
+## 📁 Project Structure
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```text
+learning-platform/
+├── server/                 # Backend Node.js & Express app
+│   ├── config/             # Configuration files
+│   ├── models/             # Mongoose database models
+│   ├── routes/             # API endpoints
+│   ├── seeding/            # Database seeders
+│   ├── index.js            # Entry point for backend
+│   └── package.json        # Backend dependencies
+├── src/                    # Frontend React app
+│   ├── assets/             # Images, fonts, etc.
+│   ├── components/         # Reusable React components (Navbar, Footer, Chatbot, etc.)
+│   ├── context/            # Global state management
+│   ├── pages/              # Page components (Admin, Auth, Instructor, Learner)
+│   ├── App.jsx             # Main routing component
+│   └── index.css           # Global styles
+├── package.json            # Frontend dependencies
+└── README.md               # Project documentation
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## ⚙️ Environment Variables
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+To run this project, you will need to add the following environment variables to your `.env` file inside the `server/` directory:
 
-### `npm run eject`
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+# Cloudinary Integration (for media uploads)
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# AI Chatbot Integration
+GROQ_API_KEY=your_groq_api_key
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+# Payment Gateway
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🚀 Getting Started
 
-## Learn More
+Follow these steps to set up the project locally:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 1. Clone the repository
+```bash
+git clone <repository-url>
+cd learning-platform
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 2. Install dependencies
 
-### Code Splitting
+**For the Frontend:**
+```bash
+npm install
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+**For the Backend:**
+```bash
+cd server
+npm install
+```
 
-### Analyzing the Bundle Size
+### 3. Set up the Environment Variables
+Create a `.env` file in the `server` directory and add the necessary credentials as shown in the Environment Variables section.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### 4. Run the Application
 
-### Making a Progressive Web App
+**Start the Backend Server:**
+Open a terminal, navigate to the `server` directory, and run:
+```bash
+npm run dev
+```
+The backend server will start on `http://localhost:5000`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+**Start the Frontend Development Server:**
+Open a new terminal, navigate to the root directory, and run:
+```bash
+npm start
+```
+The React application will start on `http://localhost:3000`.
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## 📜 License
+This project is open-source and available under the ISC License.

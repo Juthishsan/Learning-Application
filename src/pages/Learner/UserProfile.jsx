@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { User, Mail, Award, BookOpen, Calendar, Edit3, Camera, Globe, Linkedin, Twitter, Youtube, Facebook, Instagram, Link as LinkIcon, FileText, MapPin, Phone, LogOut, Shield, ChevronRight } from 'lucide-react';
+import { User, Mail, Award, BookOpen, Calendar, Edit3, Camera, Globe, Linkedin, Twitter, Youtube, Facebook, Instagram, Link as LinkIcon, FileText, MapPin, Phone, LogOut, Shield, ChevronRight, Activity, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import PersonalizationModal from '../../components/Modals/PersonalizationModal';
 import EditProfileModal from '../../components/Modals/EditProfileModal';
 import ChangePasswordModal from '../../components/Modals/ChangePasswordModal';
+import '../../styles/UserProfile.css';
 
 const UserProfile = () => {
     const navigate = useNavigate();
@@ -23,7 +24,6 @@ const UserProfile = () => {
                 const localUser = JSON.parse(storedUser);
                 setUser(localUser);
                 
-                // Initial inaccurate count
                 if (localUser.enrolledCourses) {
                     setEnrolledCount(localUser.enrolledCourses.length);
                 }
@@ -44,7 +44,6 @@ const UserProfile = () => {
                     
                     if (coursesRes.ok) {
                         const coursesData = await coursesRes.json();
-                        // Filter valid courses
                         const validCourses = coursesData.filter(e => e.courseId);
                         setEnrolledCourses(validCourses);
                         setEnrolledCount(validCourses.length);
@@ -66,242 +65,251 @@ const UserProfile = () => {
         toast.success('Logged out successfully');
     };
 
-    if (!user) return <div className="container" style={{ paddingTop: '100px', textAlign: 'center' }}>Please log in to view profile.</div>;
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.1 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 30 },
+        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    };
+
+    if (!user) return <div className="pro-page" style={{ paddingTop: '100px', textAlign: 'center' }}>Please log in to view profile.</div>;
 
     return (
-        <div style={{ background: 'transparent', minHeight: '100vh', width: '100%', paddingBottom: '4rem' }}>
-            <div className="container" style={{ maxWidth: '1100px', paddingTop: '100px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+        <div className="pro-page">
+            <div className="pro-bg-shape pro-shape-1"></div>
+            <div className="pro-bg-shape pro-shape-2"></div>
+
+            <div className="pro-container">
                 
-                {/* Header Section */}
+                {/* Hero Section */}
                 <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="card" 
-                    style={{ padding: 0, overflow: 'hidden', marginBottom: '2rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', background: 'white', borderRadius: '16px' }}
+                    transition={{ duration: 0.6 }}
+                    className="pro-hero-card"
                 >
-                    {/* Cover Image */}
-                    <div style={{ height: '200px', background: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)', position: 'relative' }}></div>
+                    <div className="pro-hero-banner"></div>
                     
-                    <div style={{ padding: '0 2.5rem 2.5rem', position: 'relative' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', md: {flexDirection: 'row'}, gap: '1.5rem' }}>
-                             {/* Avatar */}
-                            <div style={{ 
-                                width: '150px', height: '150px', borderRadius: '50%', background: 'white', padding: '6px',
-                                marginTop: '-75px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', position: 'relative', zIndex: 10
-                            }}>
-                                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-                                    {user.avatar ? (
-                                        <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <span style={{ fontSize: '3.5rem', fontWeight: 700, color: '#64748b' }}>{user.name.charAt(0)}</span>
+                    <div className="pro-hero-content">
+                        <div className="pro-avatar-container">
+                            <div className="pro-avatar">
+                                {user.avatar ? (
+                                    <img src={user.avatar} alt={user.name} />
+                                ) : (
+                                    <span>{user.name.charAt(0)}</span>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div className="pro-hero-details">
+                            <div>
+                                <h1 className="pro-name">{user.name}</h1>
+                                <p className="pro-role">
+                                    {user.preferences?.occupation || 'Student'} 
+                                    {user.location ? ` • ${user.location}` : ''}
+                                </p>
+                                
+                                <div className="pro-meta">
+                                    {user.location && (
+                                        <span><MapPin size={16} /> {user.location}</span>
                                     )}
+                                    <span><Calendar size={16} /> Joined {new Date(user.createdAt).getFullYear()}</span>
                                 </div>
                             </div>
-                            
-                            {/* Header Info */}
-                            <div style={{ paddingTop: '1rem', flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                                <div>
-                                    <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.25rem' }}>{user.name}</h1>
-                                    <p style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: 500, marginBottom: '0.75rem' }}>
-                                        {user.preferences?.occupation || 'Student'} {user.location ? `• ${user.location}` : ''}
-                                    </p>
-                                    
-                                    <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: '#64748b' }}>
-                                        {user.location && (
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                <MapPin size={16} /> {user.location}
-                                            </span>
-                                        )}
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                            <Calendar size={16} /> Joined {new Date(user.createdAt).getFullYear()}
-                                        </span>
-                                    </div>
-                                </div>
 
-                                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                    <button onClick={() => setIsEditProfileOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', borderRadius: '8px', fontWeight: 600, border: '1px solid #cbd5e1' }}>
-                                        <Edit3 size={18} /> Edit Profile
-                                    </button>
-                                </div>
+                            <div>
+                                <button onClick={() => setIsEditProfileOpen(true)} className="pro-edit-btn">
+                                    <Edit3 size={18} /> Edit Profile
+                                </button>
                             </div>
                         </div>
                     </div>
                 </motion.div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
+                <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="pro-grid"
+                >
                     
                     {/* Left Column */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <div className="pro-col">
                         
-                        {/* Highlights / Stats */}
-                        <div className="card" style={cardStyle}>
-                            <h3 style={sectionTitleStyle}>Analytics</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div style={statBoxStyle}>
-                                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>{enrolledCount}</div>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Enrolled Courses</div>
+                        {/* Highlights / Analytics */}
+                        <motion.div variants={itemVariants} className="pro-card">
+                            <h3 className="pro-card-title"><Activity size={20} /> Analytics</h3>
+                            <div className="pro-analytics-grid">
+                                <div className="pro-stat-box">
+                                    <div className="pro-stat-val">{enrolledCount}</div>
+                                    <div className="pro-stat-label">Enrolled Courses</div>
                                 </div>
-                                <div style={statBoxStyle}>
-                                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+                                <div className="pro-stat-box">
+                                    <div className="pro-stat-val">
                                         {user.createdAt ? Math.floor((new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24)) + 1 : 1}
                                     </div>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Day Streak</div>
+                                    <div className="pro-stat-label">Day Streak</div>
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
 
                          {/* Contact & Social */}
-                        <div className="card" style={cardStyle}>
-                            <h3 style={sectionTitleStyle}>Contact Information</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <div style={contactRowStyle}>
-                                    <div style={iconBoxStyle}><Mail size={18} /></div>
+                        <motion.div variants={itemVariants} className="pro-card">
+                            <h3 className="pro-card-title"><Mail size={20} /> Contact Information</h3>
+                            <div className="pro-contact-list">
+                                <div className="pro-contact-item">
+                                    <div className="pro-icon-box"><Mail size={18} /></div>
                                     <div>
-                                        <div style={labelStyle}>Email</div>
-                                        <div style={valueStyle}>{user.email}</div>
+                                        <div className="pro-contact-label">Email</div>
+                                        <div className="pro-contact-val">{user.email}</div>
                                     </div>
                                 </div>
                                 {user.phone && (
-                                    <div style={contactRowStyle}>
-                                        <div style={iconBoxStyle}><Phone size={18} /></div>
+                                    <div className="pro-contact-item">
+                                        <div className="pro-icon-box"><Phone size={18} /></div>
                                         <div>
-                                            <div style={labelStyle}>Phone</div>
-                                            <div style={valueStyle}>{user.phone}</div>
+                                            <div className="pro-contact-label">Phone</div>
+                                            <div className="pro-contact-val">{user.phone}</div>
                                         </div>
                                     </div>
                                 )}
                                 {user.socialLinks?.website && (
-                                     <div style={contactRowStyle}>
-                                         <div style={iconBoxStyle}><Globe size={18} /></div>
+                                     <div className="pro-contact-item">
+                                         <div className="pro-icon-box"><Globe size={18} /></div>
                                          <div>
-                                             <div style={labelStyle}>Website</div>
-                                             <a href={user.socialLinks.website} target="_blank" rel="noopener noreferrer" style={{ ...valueStyle, color: 'var(--primary)', textDecoration: 'underline' }}>
+                                             <div className="pro-contact-label">Website</div>
+                                             <a href={user.socialLinks.website} target="_blank" rel="noopener noreferrer" className="pro-contact-val pro-link">
                                                  {user.socialLinks.website.replace(/^https?:\/\//, '')}
                                              </a>
                                          </div>
                                      </div>
                                 )}
                                 {user.resume && (
-                                    <div style={contactRowStyle}>
-                                        <div style={iconBoxStyle}><FileText size={18} /></div>
+                                    <div className="pro-contact-item">
+                                        <div className="pro-icon-box"><FileText size={18} /></div>
                                         <div>
-                                            <div style={labelStyle}>Resume</div>
-                                            <a href={user.resume} target="_blank" rel="noopener noreferrer" style={{ ...valueStyle, color: 'var(--primary)', textDecoration: 'underline' }}>
-                                                View Resume
+                                            <div className="pro-contact-label">Resume</div>
+                                            <a href={user.resume} target="_blank" rel="noopener noreferrer" className="pro-contact-val pro-link">
+                                                View Document
                                             </a>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Social Icons Row */}
+                            {/* Social Icons */}
                             {user.socialLinks && Object.values(user.socialLinks).some(Boolean) && (
-                                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '0.75rem' }}>
-                                    {user.socialLinks.linkedin && <SocialIcon href={user.socialLinks.linkedin} icon={<Linkedin size={18} />} />}
-                                    {user.socialLinks.twitter && <SocialIcon href={user.socialLinks.twitter} icon={<Twitter size={18} />} />}
-                                    {user.socialLinks.instagram && <SocialIcon href={user.socialLinks.instagram} icon={<Instagram size={18} />} />}
-                                    {user.socialLinks.facebook && <SocialIcon href={user.socialLinks.facebook} icon={<Facebook size={18} />} />}
-                                    {user.socialLinks.youtube && <SocialIcon href={user.socialLinks.youtube} icon={<Youtube size={18} />} />}
+                                <div className="pro-social-row">
+                                    {user.socialLinks.linkedin && <a href={user.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="pro-social-icon"><Linkedin size={20} /></a>}
+                                    {user.socialLinks.twitter && <a href={user.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="pro-social-icon"><Twitter size={20} /></a>}
+                                    {user.socialLinks.instagram && <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="pro-social-icon"><Instagram size={20} /></a>}
+                                    {user.socialLinks.facebook && <a href={user.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="pro-social-icon"><Facebook size={20} /></a>}
+                                    {user.socialLinks.youtube && <a href={user.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="pro-social-icon"><Youtube size={20} /></a>}
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
 
                         {/* Skills */}
-                        <div className="card" style={cardStyle}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>Skills & Interests</h3>
-                                <button onClick={() => setIsPersonalizeOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}>
+                        <motion.div variants={itemVariants} className="pro-card">
+                            <div className="pro-header-actions">
+                                <h3 className="pro-card-title" style={{marginBottom: 0}}><Award size={20} /> Skills & Interests</h3>
+                                <button onClick={() => setIsPersonalizeOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--pro-primary)' }}>
                                     <Edit3 size={18} />
                                 </button>
                             </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div className="pro-skills-list">
                                 {user.preferences?.skills && user.preferences.skills.length > 0 ? (
                                     user.preferences.skills.map(skill => (
-                                        <span key={skill} style={{ background: '#f1f5f9', color: '#334155', padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 500 }}>
+                                        <span key={skill} className="pro-skill-tag">
                                             {skill}
                                         </span>
                                     ))
                                 ) : (
-                                    <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No skills selected yet</span>
+                                    <div className="pro-empty-state" style={{width: '100%', padding: '1rem'}}>No skills selected yet. Click edit to add some!</div>
                                 )}
                             </div>
-                        </div>
+                        </motion.div>
 
                     </div>
 
                     {/* Right Column */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <div className="pro-col">
                         
                         {/* About Me */}
-                        <div className="card" style={cardStyle}>
-                            <h3 style={sectionTitleStyle}>About Me</h3>
+                        <motion.div variants={itemVariants} className="pro-card">
+                            <h3 className="pro-card-title"><User size={20} /> About Me</h3>
                             {user.bio ? (
-                                <p style={{ color: '#334155', lineHeight: '1.6', fontSize: '1rem' }}>{user.bio}</p>
+                                <p className="pro-about-text">{user.bio}</p>
                             ) : (
-                                <div style={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '1rem' }}>
-                                    Write something about yourself to let people know who you are.
-                                    <br/>
-                                    <button onClick={() => setIsEditProfileOpen(true)} style={{ color: 'var(--primary)', background: 'none', border: 'none', fontWeight: 600, marginTop: '0.5rem', cursor: 'pointer' }}>Add Bio</button>
+                                <div className="pro-empty-state">
+                                    Your bio is empty. Write a little bit about yourself to let the community know who you are.
+                                    <br/><br/>
+                                    <button onClick={() => setIsEditProfileOpen(true)} className="pro-link" style={{background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '1rem'}}>+ Add Bio</button>
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
 
-                        {/* Recent Activity / Active Courses */}
-                        <div className="card" style={cardStyle}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h3 style={{ ...sectionTitleStyle, marginBottom: 0 }}>Active Courses</h3>
-                                <button onClick={() => navigate('/dashboard')} style={{ fontSize: '0.9rem', color: 'var(--primary)', background: 'none', border: 'none', fontWeight: 600, cursor: 'pointer' }}>View All</button>
+                        {/* Active Courses */}
+                        <motion.div variants={itemVariants} className="pro-card">
+                            <div className="pro-header-actions">
+                                <h3 className="pro-card-title" style={{marginBottom: 0}}><BookOpen size={20} /> Active Courses</h3>
+                                <button onClick={() => navigate('/dashboard')} className="pro-link" style={{background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem'}}>View All</button>
                             </div>
 
                             {enrolledCourses.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div className="pro-course-list">
                                     {enrolledCourses.slice(0, 3).map((enrollment, idx) => (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'background 0.2s' }} onClick={() => navigate(`/course-content/${enrollment.courseId?._id}`)} className="hover:bg-slate-50">
-                                            <div style={{ width: '50px', height: '50px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', overflow: 'hidden' }}>
+                                        <div key={idx} className="pro-course-item" onClick={() => navigate(`/course-content/${enrollment.courseId?._id}`)}>
+                                            <div className="pro-course-img">
                                                 {enrollment.courseId?.thumbnail && (enrollment.courseId.thumbnail.startsWith('http') || enrollment.courseId.thumbnail.startsWith('/')) ? (
-                                                    <img src={enrollment.courseId.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <img src={enrollment.courseId.thumbnail} alt="" />
                                                 ) : (
                                                     (enrollment.courseId?.thumbnail && enrollment.courseId.thumbnail.length < 10) ? enrollment.courseId.thumbnail : '📚'
                                                 )}
                                             </div>
-                                            <div style={{ flex: 1 }}>
-                                                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.25rem' }}>{enrollment.courseId?.title}</h4>
-                                                <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                                                    <div style={{ width: `${enrollment.progress || 0}%`, height: '100%', background: enrollment.progress === 100 ? '#10b981' : '#4f46e5' }}></div>
+                                            <div className="pro-course-info">
+                                                <h4 className="pro-course-title">{enrollment.courseId?.title}</h4>
+                                                <div className="pro-progress-bar">
+                                                    <div className={`pro-progress-fill ${enrollment.progress === 100 ? 'completed' : ''}`} style={{ width: `${enrollment.progress || 0}%` }}></div>
                                                 </div>
                                             </div>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>{enrollment.progress || 0}%</span>
+                                            <span className="pro-progress-val">{enrollment.progress || 0}%</span>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                                    No active courses.
+                                <div className="pro-empty-state">
+                                    You don't have any active courses yet. Time to start learning!
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
 
                         {/* Account Settings */}
-                        <div className="card" style={cardStyle}>
-                           <h3 style={sectionTitleStyle}>Account Settings</h3>
-                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <button onClick={() => setIsChangePasswordOpen(true)} className="btn" style={settingButtonStyle}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Shield size={18} /> Password & Security</div> <ChevronRight size={16} style={{ marginLeft: 'auto' }} />
+                        <motion.div variants={itemVariants} className="pro-card">
+                           <h3 className="pro-card-title"><Shield size={20} /> Account Settings</h3>
+                           <div className="pro-settings-list">
+                                <button onClick={() => setIsChangePasswordOpen(true)} className="pro-setting-btn">
+                                    <Shield size={20} color="#8b5cf6" /> Password & Security <ChevronRight size={18} className="pro-btn-right" />
                                 </button>
-                                <button className="btn" style={settingButtonStyle} onClick={() => toast.success('Notifications settings updated')}>
-                                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px' }}>✓</div> 
-                                    Email Notifications <ChevronRight size={16} style={{ marginLeft: 'auto' }} />
+                                <button className="pro-setting-btn" onClick={() => toast.success('Notifications settings updated')}>
+                                    <MessageSquare size={20} color="#10b981" /> Email Notifications <ChevronRight size={18} className="pro-btn-right" />
                                 </button>
-                                <button onClick={handleLogout} className="btn" style={{ ...settingButtonStyle, color: '#ef4444', borderTop: '1px solid #f1f5f9', marginTop: '0.5rem' }}>
-                                    <LogOut size={18} /> Sign Out
+                                <button onClick={handleLogout} className="pro-setting-btn danger" style={{ marginTop: '0.5rem' }}>
+                                    <LogOut size={20} /> Sign Out <ChevronRight size={18} className="pro-btn-right" />
                                 </button>
                            </div>
-                        </div>
+                        </motion.div>
 
                     </div>
-                </div>
+                </motion.div>
 
-                {/* Modals */}
+                {/* Modals remain exactly the same behavior */}
                 {user && (
                     <PersonalizationModal 
                         isOpen={isPersonalizeOpen} 
@@ -325,53 +333,9 @@ const UserProfile = () => {
                         userId={user._id || user.id}
                     />
                 )}
-                
-                <style jsx>{`
-                    .btn-outline:hover { background: #f8fafc; }
-                    .hover:bg-slate-50:hover { background: #f8fafc; }
-                `}</style>
             </div>
         </div>
     );
-};
-
-const SocialIcon = ({ href, icon }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: '#f1f5f9', color: '#475569', transition: 'all 0.2s' }} onMouseOver={e => {e.currentTarget.style.background = '#e0e7ff'; e.currentTarget.style.color = 'var(--primary)'}} onMouseOut={e => {e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'}}>
-        {icon}
-    </a>
-);
-
-// Styles
-const cardStyle = {
-    background: 'white', padding: '1.5rem', borderRadius: '16px', 
-    border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-};
-const sectionTitleStyle = {
-    fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', marginBottom: '1rem',
-    display: 'flex', alignItems: 'center', gap: '0.5rem'
-};
-const statBoxStyle = {
-    background: '#f8fafc', padding: '1.25rem', borderRadius: '12px', 
-    textAlign: 'center', border: '1px solid #e2e8f0'
-};
-const contactRowStyle = {
-    display: 'flex', alignItems: 'center', gap: '1rem'
-};
-const iconBoxStyle = {
-    width: '36px', height: '36px', borderRadius: '8px', background: '#f1f5f9',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b'
-};
-const labelStyle = {
-    fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px'
-};
-const valueStyle = {
-    fontSize: '0.95rem', color: '#334155', fontWeight: 500
-};
-const settingButtonStyle = {
-    width: '100%', textAlign: 'left', padding: '0.75rem', borderRadius: '8px',
-    display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 600,
-    color: '#475569', background: 'transparent', border: 'none', cursor: 'pointer',
-    transition: 'background 0.2s'
 };
 
 export default UserProfile;
