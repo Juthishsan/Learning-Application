@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Users, User, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, User, Settings, LogOut, ChevronRight, IndianRupee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -40,6 +40,7 @@ const InstructorSidebar = () => {
         { name: 'Dashboard', path: '/instructor/dashboard', icon: LayoutDashboard, id: 'dashboard' },
         { name: 'My Courses', path: '/instructor/courses', icon: BookOpen, id: 'courses' },
         { name: 'My Students', path: '/instructor/students', icon: Users, id: 'students' },
+        { name: 'Earnings', path: '/instructor/earnings', icon: IndianRupee, id: 'earnings' },
         { name: 'Profile', path: '/instructor/profile', icon: User, id: 'profile' },
         { name: 'Settings', path: '/instructor/settings', icon: Settings, id: 'settings' },
     ];

@@ -1,8 +1,12 @@
-
 import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/Admin/AdminSidebar';
-import { Plus, Trash2, Edit, Search, X as XIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { 
+    Plus, Trash2, Edit, Search, X as XIcon, BookOpen, Users, 
+    TrendingUp, Filter, MoreHorizontal, Download, LayoutGrid, 
+    List, ArrowUpRight, CheckCircle, AlertCircle, FileText, Video,
+    Image as ImageIcon, Upload, Eye
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/ConfirmModal';
 
@@ -27,7 +31,10 @@ const AdminCourses = () => {
 
     const [courses, setCourses] = useState([]);
     const [instructors, setInstructors] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState('table'); // table or grid
+    const [searchQuery, setSearchQuery] = useState('');
     const [formData, setFormData] = useState({
         title: '', description: '', instructor: '', price: '', category: '', thumbnail: '📚'
     });
@@ -39,15 +46,25 @@ const AdminCourses = () => {
     });
 
     const fetchCourses = async () => {
-        const res = await fetch('http://localhost:5000/api/courses');
-        const data = await res.json();
-        setCourses(data);
+        try {
+            const res = await fetch('http://localhost:5000/api/courses');
+            const data = await res.json();
+            setCourses(data);
+        } catch (err) {
+            toast.error('Failed to load courses');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const fetchInstructors = async () => {
-        const res = await fetch('http://localhost:5000/api/instructors');
-        const data = await res.json();
-        setInstructors(data);
+        try {
+            const res = await fetch('http://localhost:5000/api/instructors');
+            const data = await res.json();
+            setInstructors(data);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     useEffect(() => {
@@ -81,9 +98,7 @@ const AdminCourses = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
-            if (!response.ok) {
-                throw new Error('Failed to create course');
-            }
+            if (!response.ok) throw new Error('Failed to create course');
             setIsModalOpen(false);
             setFormData({ title: '', description: '', instructor: '', price: '', category: '', thumbnail: '📚' });
             fetchCourses();
@@ -110,22 +125,20 @@ const AdminCourses = () => {
         e.preventDefault();
         if (!uploadFile || !selectedCourse) return;
 
-        const formData = new FormData();
-        formData.append('file', uploadFile);
-        formData.append('title', contentTitle);
-        formData.append('type', contentType);
+        const uploadData = new FormData();
+        uploadData.append('file', uploadFile);
+        uploadData.append('title', contentTitle);
+        uploadData.append('type', contentType);
 
         setUploading(true);
-
         try {
             const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/content`, {
                 method: 'POST',
-                body: formData
+                body: uploadData
             });
 
             if (res.ok) {
                 const updatedContent = await res.json();
-                // Update local state
                 const updatedCourse = { ...selectedCourse, content: updatedContent };
                 setCourses(courses.map(c => c._id === selectedCourse._id ? updatedCourse : c));
                 setSelectedCourse(updatedCourse);
@@ -147,13 +160,12 @@ const AdminCourses = () => {
         setConfirmModal({
             isOpen: true,
             title: 'Delete Content',
-            message: 'Are you sure you want to remove this content file? This will permanently delete it from the course.',
+            message: 'Are you sure you want to remove this content file?',
             onConfirm: async () => {
                 try {
                     const res = await fetch(`http://localhost:5000/api/courses/${selectedCourse._id}/content/${contentId}`, {
                         method: 'DELETE'
                     });
-
                     if (res.ok) {
                         const updatedContent = await res.json();
                         const updatedCourse = { ...selectedCourse, content: updatedContent };
@@ -193,9 +205,7 @@ const AdminCourses = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
-            if (!response.ok) {
-                throw new Error('Failed to update course');
-            }
+            if (!response.ok) throw new Error('Failed to update course');
             setIsEditModalOpen(false);
             setEditingId(null);
             setFormData({ title: '', description: '', instructor: '', price: '', category: '', thumbnail: '📚' });
@@ -207,305 +217,284 @@ const AdminCourses = () => {
         }
     };
 
+    const filteredCourses = courses.filter(c => 
+        c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const stats = [
+        { label: 'Total Courses', value: courses.length, icon: BookOpen, color: '#6366f1' },
+        { label: 'Active Students', value: courses.reduce((acc, c) => acc + (c.students || 0), 0), icon: Users, color: '#10b981' },
+        { label: 'Avg. Course Price', value: `₹${(courses.reduce((acc, c) => acc + Number(c.price), 0) / (courses.length || 1)).toFixed(2)}`, icon: TrendingUp, color: '#f59e0b' }
+    ];
+
+    if (loading) return (
+        <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', background: '#0f172a' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                <Plus size={48} color="#6366f1" />
+            </motion.div>
+        </div>
+    );
+
     return (
         <div style={{ display: 'flex', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
             <AdminSidebar />
-            <main style={{ flex: 1, padding: '2.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-                    <div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#1e293b', letterSpacing: '-0.5px' }}>Course Management</h1>
-                        <p style={{ color: '#64748b', marginTop: '0.25rem' }}>Organize and manage your educational content</p>
+            <main style={{ flex: 1, padding: '2.5rem', overflowX: 'hidden' }}>
+                
+                {/* Executive Header */}
+                <header style={{ marginBottom: '3rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                        <div>
+                            <motion.h1 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.04em', margin: 0 }}>
+                                Course Catalog
+                            </motion.h1>
+                            <p style={{ color: '#64748b', fontSize: '1.1rem', fontWeight: 500, marginTop: '0.5rem' }}>Architect the future of learning on the platform</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.8rem 1.5rem', borderRadius: '14px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}><Download size={18} /> Export</button>
+                            <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.8rem 1.8rem', borderRadius: '14px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: 'white', border: 'none', fontWeight: 800, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)' }}><Plus size={20} /> Create Course</button>
+                        </div>
                     </div>
-                    <button onClick={() => setIsModalOpen(true)} className="btn" style={{ background: '#4f46e5', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.3)', transition: 'transform 0.2s', border: 'none' }} onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                        <Plus size={20} /> Add New Course
-                    </button>
+
+                    {/* Quick Stats */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+                        {stats.map((stat, i) => (
+                            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} style={{ background: 'white', padding: '1.5rem', borderRadius: '24px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                                <div style={{ background: `${stat.color}15`, color: stat.color, width: '56px', height: '56px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><stat.icon size={28} /></div>
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
+                                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a' }}>{stat.value}</div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </header>
+
+                {/* Filter & View Controls */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                    <div style={{ position: 'relative', width: '400px' }}>
+                        <Search style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={20} />
+                        <input 
+                            value={searchQuery} 
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search by title, instructor or category..." 
+                            style={{ width: '100%', padding: '1rem 1rem 1rem 3.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', background: 'white', fontSize: '1rem', fontWeight: 500, outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} 
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', background: 'white', padding: '0.4rem', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                        <button onClick={() => setViewMode('table')} style={{ padding: '0.6rem', borderRadius: '10px', border: 'none', background: viewMode === 'table' ? '#f1f5f9' : 'transparent', color: viewMode === 'table' ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}><List size={20} /></button>
+                        <button onClick={() => setViewMode('grid')} style={{ padding: '0.6rem', borderRadius: '10px', border: 'none', background: viewMode === 'grid' ? '#f1f5f9' : 'transparent', color: viewMode === 'grid' ? '#0f172a' : '#94a3b8', cursor: 'pointer' }}><LayoutGrid size={20} /></button>
+                    </div>
                 </div>
 
-                <div className="card" style={{ overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', borderRadius: '16px', background: 'white' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <tr>
-                                <th style={{ padding: '1.25rem', fontWeight: 700, color: '#475569', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Course Title</th>
-                                <th style={{ padding: '1.25rem', fontWeight: 700, color: '#475569', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Instructor</th>
-                                <th style={{ padding: '1.25rem', fontWeight: 700, color: '#475569', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</th>
-                                <th style={{ padding: '1.25rem', fontWeight: 700, color: '#475569', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Price</th>
-                                <th style={{ padding: '1.25rem', fontWeight: 700, color: '#475569', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {courses.length > 0 ? courses.map(course => (
-                                <tr key={course._id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s' }}>
-                                    <td style={{ padding: '1.25rem', verticalAlign: 'middle' }}>
-                                        <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '1rem' }}>{course.title}</div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                            <span style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '0.1rem 0.5rem', borderRadius: '4px' }}>
-                                                {course.content?.length || 0} modules
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '1.25rem', color: '#64748b', fontWeight: 500, verticalAlign: 'middle' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.8rem' }}>
-                                                {course.instructor.charAt(0)}
-                                            </div>
-                                            {course.instructor}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '1.25rem', verticalAlign: 'middle' }}>
-                                        <span style={{background: '#e0e7ff', color: '#4f46e5', padding: '0.35rem 0.85rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600, border: '1px solid #c7d2fe'}}>
-                                            {course.category}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '1.25rem', fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: '#1e293b', verticalAlign: 'middle' }}>
-                                        ₹{course.price}
-                                    </td>
-                                    <td style={{ padding: '1.25rem', verticalAlign: 'middle' }}>
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                            <button onClick={() => handleOpenContentModal(course)} style={{ padding: '0.6rem 1rem', color: '#0ea5e9', background: 'white', border: '1px solid #e0f2fe', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} onMouseOver={e => e.currentTarget.style.borderColor = '#0ea5e9'} onMouseOut={e => e.currentTarget.style.borderColor = '#e0f2fe'}>
-                                                <Edit size={14} /> Content
-                                            </button>
-                                            <button onClick={() => handleEdit(course)} style={{ padding: '0.6rem', color: '#64748b', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Edit Details" onMouseOver={e => {e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#1e293b'}} onMouseOut={e => {e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'}}>
-                                                <Edit size={18} />
-                                            </button>
-                                            <button onClick={() => handleDelete(course._id)} style={{ padding: '0.6rem', color: '#ef4444', background: 'white', border: '1px solid #fee2e2', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Delete Course" onMouseOver={e => {e.currentTarget.style.background = '#fee2e2'}} onMouseOut={e => {e.currentTarget.style.background = 'white'}}>
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )) : (
+                {/* Main Content View */}
+                {viewMode === 'table' ? (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.03)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                            <thead>
                                 <tr>
-                                    <td colSpan="5" style={{ padding: '4rem', textAlign: 'center', color: '#94a3b8' }}>
-                                        <div style={{ marginBottom: '1rem', display: 'inline-block', padding: '1.5rem', borderRadius: '50%', background: '#f1f5f9' }}>
-                                            <Search size={32} />
-                                        </div>
-                                        <p style={{ fontWeight: 500 }}>No courses found. Start by creating one!</p>
-                                    </td>
+                                    <th style={{ padding: '1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Course Identifier</th>
+                                    <th style={{ padding: '1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Lead Instructor</th>
+                                    <th style={{ padding: '1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Category</th>
+                                    <th style={{ padding: '1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Investment</th>
+                                    <th style={{ padding: '1.5rem', textAlign: 'right', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Actions</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                <AnimatePresence>
+                                    {filteredCourses.map((course, idx) => (
+                                        <motion.tr 
+                                            key={course._id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.03 }}
+                                            style={{ transition: 'background 0.2s' }}
+                                        >
+                                            <td style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                                    <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', border: '1px solid #e2e8f0' }}>{course.thumbnail || '📚'}</div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem' }}>{course.title}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                                                            <FileText size={12} /> {course.content?.length || 0} Modules
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem' }}>{course.instructor.charAt(0)}</div>
+                                                    <span style={{ fontWeight: 600, color: '#475569' }}>{course.instructor}</span>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                <span style={{ background: '#eff6ff', color: '#2563eb', padding: '0.4rem 1rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 800, border: '1px solid #dbeafe' }}>{course.category}</span>
+                                            </td>
+                                            <td style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                <div style={{ fontWeight: 900, color: '#0f172a', fontSize: '1.1rem' }}>₹{course.price}</div>
+                                            </td>
+                                            <td style={{ padding: '1.5rem', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                    <button onClick={() => handleOpenContentModal(course)} style={{ padding: '0.6rem 1.25rem', borderRadius: '10px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FileText size={16} /> Content</button>
+                                                    <button onClick={() => handleEdit(course)} style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Edit size={18} /></button>
+                                                    <button onClick={() => handleDelete(course._id)} style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'white', border: '1px solid #fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </AnimatePresence>
+                            </tbody>
+                        </table>
+                    </motion.div>
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                        {filteredCourses.map((course, idx) => (
+                            <motion.div key={course._id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }} style={{ background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9', padding: '1.5rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden' }}>
+                                <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>{course.thumbnail || '📚'}</div>
+                                <div style={{ background: '#eff6ff', color: '#2563eb', padding: '0.25rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, display: 'inline-block', marginBottom: '1rem' }}>{course.category}</div>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.75rem', lineHeight: 1.3 }}>{course.title}</h3>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem' }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 900 }}>{course.instructor.charAt(0)}</div>
+                                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>{course.instructor}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9' }}>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a' }}>₹{course.price}</div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button onClick={() => handleEdit(course)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Edit size={16} /></button>
+                                        <button onClick={() => handleDelete(course._id)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
             </main>
 
-            {/* Content Management Modal */}
-            {contentModalOpen && selectedCourse && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="card" 
-                        style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '0', borderRadius: '16px', background: 'white' }}
-                    >
-                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Manage Content</h2>
-                                <p style={{ fontSize: '0.85rem', color: '#64748b' }}>{selectedCourse.title}</p>
-                            </div>
-                            <button onClick={() => setContentModalOpen(false)} style={{ padding: '0.5rem', borderRadius: '50%', background: '#e2e8f0', color: '#64748b', border: 'none', cursor: 'pointer' }}><XIcon size={20} /></button>
-                        </div>
-
-                        <div style={{ padding: '2rem' }}>
-                            {/* Upload Form */}
-                            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem', border: '1px solid #e2e8f0' }}>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>Upload New File</h3>
-                                <form onSubmit={handleUploadContent} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Title (e.g., Introduction Video)" 
-                                        value={contentTitle} 
-                                        onChange={e => setContentTitle(e.target.value)} 
-                                        required 
-                                        style={inputStyle}
-                                    />
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <select 
-                                            value={contentType} 
-                                            onChange={e => setContentType(e.target.value)} 
-                                            style={{ ...inputStyle, flex: 1, background: 'white' }}
-                                        >
-                                            <option value="pdf">PDF Document</option>
-                                            <option value="video">Video File</option>
-                                            <option value="image">Image Material</option>
-                                        </select>
-                                        <input 
-                                            type="file" 
-                                            onChange={e => setUploadFile(e.target.files[0])} 
-                                            required 
-                                            style={{ ...inputStyle, flex: 2, padding: '0.5rem', background: 'white' }} 
-                                        />
-                                    </div>
-                                    <button 
-                                        type="submit" 
-                                        disabled={uploading} 
-                                        className="btn" 
-                                        style={{ marginTop: '0.5rem', background: '#1e293b', color: 'white', fontWeight: 600, padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', border: 'none' }}
-                                    >
-                                        {uploading ? 'Uploading...' : 'Upload File'}
-                                    </button>
-                                </form>
+            {/* Premium Content Management Modal */}
+            <AnimatePresence>
+                {contentModalOpen && selectedCourse && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} style={{ width: '100%', maxWidth: '700px', background: 'white', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <div style={{ padding: '2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fcfdfe' }}>
+                                <div>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>Knowledge Assets</h2>
+                                    <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 500, marginTop: '0.25rem' }}>{selectedCourse.title}</p>
+                                </div>
+                                <button onClick={() => setContentModalOpen(false)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><XIcon size={20} /></button>
                             </div>
 
-                            {/* Content List */}
-                            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#334155' }}>Existing Content</h3>
-                            {selectedCourse.content && selectedCourse.content.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {selectedCourse.content.map(item => (
-                                        <div key={item._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                <div style={{ padding: '0.5rem', background: item.type === 'video' ? '#e0e7ff' : '#fee2e2', color: item.type === 'video' ? '#4f46e5' : '#ef4444', borderRadius: '6px' }}>
-                                                    {item.type === 'video' ? 'Video' : 'PDF'}
-                                                </div>
-                                                <span style={{ fontWeight: 600, color: '#334155' }}>{item.title}</span>
+                            <div style={{ padding: '2.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+                                {/* Upload Zone */}
+                                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '24px', border: '1px solid #e2e8f0', marginBottom: '2.5rem' }}>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Upload size={18} /> Add New Resource</h3>
+                                    <form onSubmit={handleUploadContent} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                        <input required value={contentTitle} onChange={e => setContentTitle(e.target.value)} placeholder="Resource Title (e.g., Introduction to Architecture)" style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: 'white', fontSize: '1rem', fontWeight: 500 }} />
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
+                                            <select value={contentType} onChange={e => setContentType(e.target.value)} style={{ padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: 'white', fontSize: '1rem', fontWeight: 700 }}>
+                                                <option value="pdf">PDF</option>
+                                                <option value="video">Video</option>
+                                                <option value="image">Image</option>
+                                            </select>
+                                            <div style={{ position: 'relative' }}>
+                                                <input type="file" onChange={e => setUploadFile(e.target.files[0])} required style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 1 }} />
+                                                <div style={{ padding: '1rem', border: '1px solid #cbd5e1', borderRadius: '14px', background: 'white', color: '#64748b', fontWeight: 600, textAlign: 'center' }}>{uploadFile ? uploadFile.name : 'Select File'}</div>
                                             </div>
-                                            <button 
-                                                onClick={() => handleDeleteContent(item._id)} 
-                                                style={{ color: '#ef4444', background: '#fee2e2', padding: '0.4rem', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
                                         </div>
-                                    ))}
+                                        <button type="submit" disabled={uploading} style={{ padding: '1rem', borderRadius: '14px', background: '#0f172a', color: 'white', border: 'none', fontWeight: 800, cursor: 'pointer' }}>{uploading ? 'Processing...' : 'Upload Resource'}</button>
+                                    </form>
                                 </div>
-                            ) : (
-                                <div style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', padding: '1rem', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>No content uploaded yet.</div>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
 
-            {/* Create Modal */}
-            {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="card" 
-                        style={{ width: '550px', maxHeight: '90vh', overflowY: 'auto', padding: '0', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', background: 'white' }}
-                    >
-                         <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Add New Course</h2>
-                            <button onClick={() => setIsModalOpen(false)} style={{ padding: '0.5rem', borderRadius: '50%', background: '#e2e8f0', color: '#64748b', cursor: 'pointer', border: 'none' }}><XIcon size={20} /></button>
-                        </div>
-                        
-                        <form onSubmit={handleCreate} style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <label style={labelStyle}>Course Title</label>
-                                <input placeholder="e.g. Advanced React Patterns" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} style={inputStyle} />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Instructor Name</label>
-                                <select 
-                                    required 
-                                    value={formData.instructor} 
-                                    onChange={e => setFormData({...formData, instructor: e.target.value})} 
-                                    style={{...inputStyle, appearance: 'none', background: 'white' }}
-                                >
-                                    <option value="" disabled>Select Instructor</option>
-                                    {instructors.map(inst => (
-                                        <option key={inst._id} value={inst.name}>{inst.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Price (₹)</label>
-                                    <input placeholder="99.99" type="number" required value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} style={inputStyle} />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Category</label>
-                                    <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} style={{...inputStyle, appearance: 'none', background: 'white' }}>
-                                        <option value="" disabled>Select Category</option>
-                                        {COURSE_CATEGORIES.map((cat, index) => (
-                                            <option key={index} value={cat}>{cat}</option>
+                                {/* Asset List */}
+                                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '1.25rem' }}>Course Curriculum</h3>
+                                {selectedCourse.content && selectedCourse.content.length > 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {selectedCourse.content.map((item, i) => (
+                                            <motion.div key={item._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem', border: '1px solid #f1f5f9', borderRadius: '20px', background: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: item.type === 'video' ? '#fef2f2' : '#eff6ff', color: item.type === 'video' ? '#ef4444' : '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.type === 'video' ? <Video size={20} /> : <FileText size={20} />}</div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 800, color: '#0f172a' }}>{item.title}</div>
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{item.type}</div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer' }}><Eye size={18} /></button>
+                                                    <button onClick={() => handleDeleteContent(item._id)} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #fee2e2', background: 'white', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                                </div>
+                                            </motion.div>
                                         ))}
-                                    </select>
-                                </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8', fontStyle: 'italic', background: '#f8fafc', borderRadius: '24px', border: '2px dashed #e2e8f0' }}>No assets found in this course.</div>
+                                )}
                             </div>
-                            <div>
-                                <label style={labelStyle}>Description</label>
-                                <textarea placeholder="Describe what students will learn..." required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }} />
-                            </div>
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="btn" style={{ flex: 1, border: '1px solid #cbd5e1', color: '#475569', fontWeight: 600, background: 'white' }}>Cancel</button>
-                                <button type="submit" className="btn" style={{ flex: 1, background: '#4f46e5', color: 'white', border: 'none', fontWeight: 600 }}>Create Course</button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
-            {/* Edit Modal */}
-            {isEditModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="card" 
-                        style={{ width: '550px', maxHeight: '90vh', overflowY: 'auto', padding: '0', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', background: 'white' }}
-                    >
-                         <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>Edit Course</h2>
-                            <button onClick={() => setIsEditModalOpen(false)} style={{ padding: '0.5rem', borderRadius: '50%', background: '#e2e8f0', color: '#64748b', cursor: 'pointer', border: 'none' }}><XIcon size={20} /></button>
-                        </div>
-                        
-                        <form onSubmit={handleUpdate} style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <label style={labelStyle}>Course Title</label>
-                                <input placeholder="e.g. Advanced React Patterns" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} style={inputStyle} />
+            {/* Premium Create/Edit Modal */}
+            <AnimatePresence>
+                {(isModalOpen || isEditModalOpen) && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} style={{ width: '100%', maxWidth: '600px', background: 'white', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                             <div style={{ padding: '2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fcfdfe' }}>
+                                <div>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>{isEditModalOpen ? 'Edit Program' : 'New Program'}</h2>
+                                    <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 500, marginTop: '0.25rem' }}>Define the parameters of your learning track</p>
+                                </div>
+                                <button onClick={() => { setIsModalOpen(false); setIsEditModalOpen(false); }} style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><XIcon size={20} /></button>
                             </div>
                             
-                            <div>
-                                <label style={labelStyle}>Instructor Name</label>
-                                <select 
-                                    required 
-                                    value={formData.instructor} 
-                                    onChange={e => setFormData({...formData, instructor: e.target.value})} 
-                                    style={{...inputStyle, appearance: 'none', background: 'white' }}
-                                >
-                                    <option value="" disabled>Select Instructor</option>
-                                    {instructors.map(inst => (
-                                        <option key={inst._id} value={inst.name}>{inst.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            <form onSubmit={isEditModalOpen ? handleUpdate : handleCreate} style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Program Title</label>
+                                    <input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="e.g. Modern Full Stack Engineering" style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '1rem', fontWeight: 600 }} />
+                                </div>
+                                
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Faculty Lead</label>
+                                        <select required value={formData.instructor} onChange={e => setFormData({...formData, instructor: e.target.value})} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '1rem', fontWeight: 800 }}>
+                                            <option value="" disabled>Select Faculty</option>
+                                            {instructors.map(inst => <option key={inst._id} value={inst.name}>{inst.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Track Category</label>
+                                        <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '1rem', fontWeight: 800 }}>
+                                            <option value="" disabled>Select Track</option>
+                                            {COURSE_CATEGORIES.map((cat, i) => <option key={i} value={cat}>{cat}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Price (₹)</label>
-                                    <input placeholder="99.99" type="number" required value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} style={inputStyle} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Enrollment Fee (₹)</label>
+                                        <input type="number" required value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} placeholder="0.00" style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '1rem', fontWeight: 900 }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Symbol / Emoji</label>
+                                        <input value={formData.thumbnail} onChange={e => setFormData({...formData, thumbnail: e.target.value})} placeholder="📚" style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '1rem', fontWeight: 800, textAlign: 'center' }} />
+                                    </div>
                                 </div>
+
                                 <div>
-                                    <label style={labelStyle}>Category</label>
-                                    <select 
-                                        required 
-                                        value={formData.category} 
-                                        onChange={e => setFormData({...formData, category: e.target.value})} 
-                                        style={{...inputStyle, appearance: 'none', background: 'white' }}
-                                    >
-                                        <option value="" disabled>Select Category</option>
-                                        {COURSE_CATEGORIES.map((cat, index) => (
-                                            <option key={index} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Abstract & Objectives</label>
+                                    <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={4} placeholder="Define the learning outcomes..." style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #cbd5e1', background: '#f8fafc', fontSize: '1rem', fontWeight: 500, resize: 'none' }} />
                                 </div>
-                            </div>
-                            
-                            <div>
-                                <label style={labelStyle}>Description</label>
-                                <textarea placeholder="Describe what students will learn..." required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{ ...inputStyle, minHeight: '120px', resize: 'vertical' }} />
-                            </div>
-                            
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                                <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn" style={{ flex: 1, border: '1px solid #cbd5e1', color: '#475569', fontWeight: 600, background: 'white' }}>Cancel</button>
-                                <button type="submit" className="btn" style={{ flex: 1, background: '#4f46e5', color: 'white', border: 'none', fontWeight: 600 }}>Save Changes</button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
-            
+
+                                <div style={{ marginTop: '1rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
+                                    <button type="submit" style={{ width: '100%', padding: '1.25rem', borderRadius: '18px', background: '#0f172a', color: 'white', border: 'none', fontWeight: 800, fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)' }}>{isEditModalOpen ? 'Update Program' : 'Establish Program'}</button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             <ConfirmModal 
                 isOpen={confirmModal.isOpen} 
                 onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
@@ -516,28 +505,5 @@ const AdminCourses = () => {
         </div>
     );
 };
-
-
-const labelStyle = {
-    fontSize: '0.85rem',
-    fontWeight: 600,
-    color: '#475569',
-    marginBottom: '0.5rem',
-    display: 'block'
-};
-
-const inputStyle = {
-    padding: '0.75rem',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    width: '100%',
-    outline: 'none',
-    fontSize: '0.95rem',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-};
-
-// Add focus effect in global css or inline if possible, for now inline simple
-// Note: Pseudo-selectors like :focus are hard in inline styles. 
-// We rely on standard CSS or simple attributes.
 
 export default AdminCourses;

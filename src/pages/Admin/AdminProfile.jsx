@@ -4,11 +4,16 @@ import { User, Mail, MapPin, Phone, Shield, Clock, Calendar, Edit2, Save, X, Act
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
-const ModalField = ({ label, icon: Icon, name, placeholder, type = "text", value, onChange }) => (
-    <div style={{ marginBottom: '1.25rem' }}>
+const ModalField = ({ label, icon: Icon, name, placeholder, type = "text", value, onChange, delay = 0 }) => (
+    <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: delay, duration: 0.3 }}
+        style={{ marginBottom: '1.5rem' }}
+    >
         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.5px' }}>{label}</label>
-        <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'absolute', left: '16px', color: '#94a3b8', transition: 'color 0.2s ease', pointerEvents: 'none' }}>
                 <Icon size={18} />
             </div>
             <input 
@@ -20,20 +25,30 @@ const ModalField = ({ label, icon: Icon, name, placeholder, type = "text", value
                 style={{ 
                     width: '100%', 
                     padding: '0.85rem 1rem 0.85rem 3rem', 
-                    borderRadius: '8px', 
+                    borderRadius: '10px', 
                     border: '1px solid #e2e8f0', 
                     outline: 'none', 
                     background: '#f8fafc', 
                     color: '#1e293b', 
                     fontSize: '0.95rem', 
                     transition: 'all 0.2s ease',
-                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+                    fontFamily: 'inherit'
                 }}
-                onFocus={(e) => { e.target.style.borderColor = '#ea580c'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)'; }}
-                onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)'; }}
+                onFocus={(e) => { 
+                    e.target.style.borderColor = '#ea580c'; 
+                    e.target.style.background = 'white'; 
+                    e.target.style.boxShadow = '0 0 0 4px rgba(234, 88, 12, 0.1)'; 
+                    e.target.previousSibling.style.color = '#ea580c';
+                }}
+                onBlur={(e) => { 
+                    e.target.style.borderColor = '#e2e8f0'; 
+                    e.target.style.background = '#f8fafc'; 
+                    e.target.style.boxShadow = 'none';
+                    e.target.previousSibling.style.color = '#94a3b8';
+                }}
             />
         </div>
-    </div>
+    </motion.div>
 );
 
 const AdminProfile = () => {
@@ -230,6 +245,8 @@ const AdminProfile = () => {
                         <div style={{ paddingBottom: '1rem' }}>
                             <button 
                                 onClick={() => setIsEditing(true)}
+                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 style={{ 
                                     background: 'white', color: '#0f172a', 
                                     border: '1px solid #e2e8f0',
@@ -239,25 +256,20 @@ const AdminProfile = () => {
                                     cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
                                     transition: 'all 0.2s'
                                 }}
-                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                             >
-                                <Edit2 size={16} /> Edit Profile
+                                <Edit2 size={18} /> Edit Profile
                             </button>
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem' }}>
                         
-                        {/* LEFT: Main Details */}
+                        {/* LEFT: Identity Details */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                            
-                            {/* Contact Card */}
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="card"
                                 style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 5px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}
                             >
                                 <div style={{ padding: '1.25rem 2rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -395,28 +407,48 @@ const AdminProfile = () => {
 
                                 <div style={{ padding: '2rem' }}>
                                     <form id="profile-form" onSubmit={handleSave}>
-                                        <ModalField label="Full Name" icon={User} name="name" placeholder="Admin Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                                        <ModalField label="Phone Number" icon={Phone} name="phone" placeholder="+1 (555) 000-0000" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-                                        <ModalField label="Location" icon={MapPin} name="location" placeholder="City, Country" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
+                                        <ModalField label="Full Name" icon={User} name="name" placeholder="Admin Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} delay={0.1} />
+                                        <ModalField label="Phone Number" icon={Phone} name="phone" placeholder="+1 (555) 000-0000" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} delay={0.2} />
+                                        <ModalField label="Location" icon={MapPin} name="location" placeholder="City, Country" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} delay={0.3} />
                                         
-                                        <div style={{ marginTop: '1.5rem' }}>
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.4, duration: 0.3 }}
+                                            style={{ marginTop: '1.5rem' }}
+                                        >
                                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.5px' }}>Administrative Notes / Bio</label>
                                             <textarea 
                                                 value={formData.bio}
                                                 onChange={(e) => setFormData({...formData, bio: e.target.value})}
                                                 style={{ 
-                                                    width: '100%', minHeight: '100px', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', background: '#f8fafc', color: '#1e293b', fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical'
+                                                    width: '100%', minHeight: '120px', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', background: '#f8fafc', color: '#1e293b', fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical', transition: 'all 0.2s ease'
+                                                }}
+                                                onFocus={(e) => { 
+                                                    e.target.style.borderColor = '#ea580c'; 
+                                                    e.target.style.background = 'white'; 
+                                                    e.target.style.boxShadow = '0 0 0 4px rgba(234, 88, 12, 0.1)'; 
+                                                }}
+                                                onBlur={(e) => { 
+                                                    e.target.style.borderColor = '#e2e8f0'; 
+                                                    e.target.style.background = '#f8fafc'; 
+                                                    e.target.style.boxShadow = 'none';
                                                 }}
                                             />
-                                        </div>
+                                        </motion.div>
                                     </form>
                                 </div>
 
                                 <div style={{ padding: '1.25rem 2rem', background: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                    <button onClick={() => setIsEditing(false)} style={{ padding: '0.75rem 1.5rem', borderRadius: '10px', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                                    <button form="profile-form" type="submit" style={{ padding: '0.75rem 2rem', borderRadius: '10px', background: '#ea580c', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <button onClick={() => setIsEditing(false)} style={{ padding: '0.75rem 1.5rem', borderRadius: '10px', color: '#64748b', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid transparent', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>Cancel</button>
+                                    <motion.button 
+                                        whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)' }}
+                                        whileTap={{ scale: 0.98 }}
+                                        form="profile-form" type="submit" 
+                                        style={{ padding: '0.75rem 2rem', borderRadius: '10px', background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 6px -1px rgba(234, 88, 12, 0.2)' }}
+                                    >
                                         <Save size={18} /> Save Changes
-                                    </button>
+                                    </motion.button>
                                 </div>
                             </motion.div>
                         </div>

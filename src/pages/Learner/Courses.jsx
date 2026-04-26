@@ -47,25 +47,25 @@ const Courses = () => {
 
         if (searchTerm) {
             result = result.filter(course => 
-                course.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                course.description.toLowerCase().includes(searchTerm.toLowerCase())
+                course.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                course.description?.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
 
         // Sorting Logic
         const sortedResult = [...result].sort((a, b) => {
             if (sortBy === 'alphabetical-az') {
-                return a.title.localeCompare(b.title);
+                return a.title?.localeCompare(b.title) || 0;
             } else if (sortBy === 'alphabetical-za') {
-                return b.title.localeCompare(a.title);
+                return b.title?.localeCompare(a.title) || 0;
             } else if (sortBy === 'price-low') {
-                return a.price - b.price;
+                return (a.price || 0) - (b.price || 0);
             } else if (sortBy === 'price-high') {
-                return b.price - a.price;
+                return (b.price || 0) - (a.price || 0);
             } else if (sortBy === 'newest') {
-                return new Date(b.createdAt) - new Date(a.createdAt);
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
             } else if (sortBy === 'rating') {
-                return b.rating - a.rating;
+                return (b.rating || 0) - (a.rating || 0);
             }
             return 0;
         });
@@ -283,18 +283,23 @@ const Courses = () => {
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '4rem' }}>Loading catalog...</div>
                     ) : filteredCourses.length > 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
-                            {filteredCourses.map((course, idx) => (
-                                <motion.div 
-                                    key={course._id || idx}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.05, duration: 0.3 }}
-                                >
-                                    <CourseCard course={course} />
-                                </motion.div>
-                            ))}
-                        </div>
+                        <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
+                            <AnimatePresence mode="popLayout">
+                                {filteredCourses.map((course) => (
+                                    <motion.div 
+                                        layout
+                                        key={course._id}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        transition={{ duration: 0.25 }}
+                                        style={{ display: 'flex' }}
+                                    >
+                                        <CourseCard course={course} />
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </motion.div>
                     ) : (
                         <div className="card" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
                             <BookOpen size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />

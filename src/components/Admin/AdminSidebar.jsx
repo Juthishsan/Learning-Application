@@ -39,7 +39,7 @@ const AdminSidebar = () => {
         { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, id: 'dashboard' },
         { name: 'Instructors', path: '/admin/instructors', icon: GraduationCap, id: 'instructors' },
         { name: 'Students', path: '/admin/users', icon: Users, id: 'users' },
-        { name: 'Earnings', path: '/admin/earnings', icon: IndianRupee, id: 'earnings' },
+        { name: 'Finance and Analytics', path: '/admin/earnings', icon: IndianRupee, id: 'earnings' },
         { name: 'Profile', path: '/admin/profile', icon: User, id: 'profile' },
         { name: 'Settings', path: '/admin/settings', icon: Settings, id: 'settings' },
     ];

@@ -1,13 +1,13 @@
+
 import { useEffect, useState } from 'react';
 import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
 import { User, Mail, MapPin, Phone, Briefcase, Calendar, MessageSquare, Globe, Github, Linkedin, Twitter, Camera, Edit2, X, Save, CheckCircle, Award, Users, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
-// Move ModalField outside to prevent re-renders on every keystroke
 const ModalField = ({ label, icon: Icon, name, placeholder, type = "text", value, onChange }) => (
     <div style={{ marginBottom: '1.25rem' }}>
-        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.5px' }}>{label}</label>
+        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{label}</label>
         <div style={{ position: 'relative' }}>
             <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>
                 <Icon size={18} />
@@ -21,7 +21,7 @@ const ModalField = ({ label, icon: Icon, name, placeholder, type = "text", value
                 style={{ 
                     width: '100%', 
                     padding: '0.85rem 1rem 0.85rem 3rem', 
-                    borderRadius: '12px', 
+                    borderRadius: '14px', 
                     border: '1px solid #e2e8f0', 
                     outline: 'none', 
                     background: '#f8fafc', 
@@ -30,7 +30,7 @@ const ModalField = ({ label, icon: Icon, name, placeholder, type = "text", value
                     transition: 'all 0.2s ease',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                 }}
-                onFocus={(e) => { e.target.style.borderColor = '#6366f1'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; }}
+                onFocus={(e) => { e.target.style.borderColor = '#6366f1'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.1)'; }}
                 onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)'; }}
             />
         </div>
@@ -40,26 +40,23 @@ const ModalField = ({ label, icon: Icon, name, placeholder, type = "text", value
 const InstructorProfile = () => {
     const [user, setUser] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
-    
-    // Derived state for profile completion
     const [completion, setCompletion] = useState(0);
     const [stats, setStats] = useState({
         courses: 0,
         students: 0,
-        rating: 4.8 // Default or fetched
+        rating: 4.8
     });
 
     const [formData, setFormData] = useState({
         phone: '',
         location: '',
         bio: '',
-        occupation: '', // For Headline / Expertise
+        occupation: '',
         website: '',
         github: '',
         linkedin: '',
         twitter: ''
     });
-
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -87,12 +84,7 @@ const InstructorProfile = () => {
             const res = await fetch(`http://localhost:5000/api/users/${userId}`);
             if (res.ok) {
                 const freshUser = await res.json();
-                
-                // Ensure id is present if backend returns _id
-                if (freshUser._id && !freshUser.id) {
-                    freshUser.id = freshUser._id;
-                }
-
+                if (freshUser._id && !freshUser.id) freshUser.id = freshUser._id;
                 setUser(freshUser);
                 setFormData({
                     phone: freshUser.phone || '',
@@ -105,8 +97,6 @@ const InstructorProfile = () => {
                     twitter: freshUser.socialLinks?.twitter || ''
                 });
                 calculateCompletion(freshUser);
-                
-                // Update local storage to keep it fresh
                 localStorage.setItem('user', JSON.stringify(freshUser));
             }
         } catch (err) {
@@ -118,20 +108,12 @@ const InstructorProfile = () => {
         try {
             const res = await fetch('http://localhost:5000/api/courses');
             const courses = await res.json();
-            
             const myCourses = courses.filter(c => c.instructor === currentUser.name || c.instructor === currentUser.username);
             const totalStudents = myCourses.reduce((acc, curr) => acc + (curr.students || 0), 0);
-            
-            // Calculate average rating if available, otherwise default
             const avgRating = myCourses.length > 0 
                 ? (myCourses.reduce((acc, curr) => acc + (curr.rating || 0), 0) / myCourses.length).toFixed(1) 
                 : 4.8;
-
-            setStats({
-                courses: myCourses.length,
-                students: totalStudents,
-                rating: avgRating
-            });
+            setStats({ courses: myCourses.length, students: totalStudents, rating: avgRating });
         } catch (err) {
             console.error("Failed to fetch instructor stats", err);
         }
@@ -140,67 +122,33 @@ const InstructorProfile = () => {
     const calculateCompletion = (userData) => {
         const fields = ['name', 'email', 'phone', 'location', 'bio'];
         const socialFields = ['website', 'github', 'linkedin', 'twitter'];
-        
         let filled = 0;
-        let total = fields.length + 1; // +1 for at least one social link
-
-        fields.forEach(field => {
-            if (userData[field]) filled++;
-        });
-
+        let total = fields.length + 1;
+        fields.forEach(field => { if (userData[field]) filled++; });
         const hasSocial = socialFields.some(field => userData.socialLinks?.[field]);
         if (hasSocial) filled++;
-
         setCompletion(Math.round((filled / total) * 100));
     };
 
     const handleSave = async (e) => {
         e.preventDefault();
-        
         try {
             const updatedData = {
                 phone: formData.phone,
                 location: formData.location,
                 bio: formData.bio,
-                preferences: {
-                    ...user.preferences,
-                    occupation: formData.occupation
-                },
-                socialLinks: {
-                    website: formData.website,
-                    github: formData.github,
-                    linkedin: formData.linkedin,
-                    twitter: formData.twitter
-                }
+                preferences: { ...user.preferences, occupation: formData.occupation },
+                socialLinks: { website: formData.website, github: formData.github, linkedin: formData.linkedin, twitter: formData.twitter }
             };
-
-            // Use _id if id is not available
             const userId = user.id || user._id;
             const res = await fetch(`http://localhost:5000/api/users/${userId}/profile`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData)
             });
-
-            if (!res.ok) {
-                throw new Error('Failed to update profile');
-            }
-
+            if (!res.ok) throw new Error('Failed to update profile');
             const updatedUserResponse = await res.json();
-            
-            const newUserState = {
-                ...user,
-                ...updatedData, // Optimistic update
-                // If we want to be strict with the response:
-                phone: updatedUserResponse.phone,
-                location: updatedUserResponse.location,
-                bio: updatedUserResponse.bio,
-                preferences: updatedUserResponse.preferences,
-                socialLinks: updatedUserResponse.socialLinks
-            };
-
+            const newUserState = { ...user, ...updatedData, phone: updatedUserResponse.phone, location: updatedUserResponse.location, bio: updatedUserResponse.bio, preferences: updatedUserResponse.preferences, socialLinks: updatedUserResponse.socialLinks };
             localStorage.setItem('user', JSON.stringify(newUserState));
             setUser(newUserState);
             calculateCompletion(newUserState);
@@ -214,47 +162,85 @@ const InstructorProfile = () => {
 
     if (!user) return null;
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+    };
+
     return (
         <div style={{ display: 'flex', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
             <InstructorSidebar />
             <main style={{ flex: 1, position: 'relative', overflowX: 'hidden' }}>
                 
                 {/* Immersive Header */}
-                <div style={{ height: '280px', background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)', position: 'relative', overflow: 'hidden' }}>
-                    {/* Decorative Circles */}
-                    <div style={{ position: 'absolute', top: '-10%', right: '10%', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', filter: 'blur(40px)' }}></div>
-                    <div style={{ position: 'absolute', bottom: '-20%', left: '5%', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', filter: 'blur(60px)' }}></div>
+                <div style={{ height: '320px', background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)', position: 'relative', overflow: 'hidden' }}>
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 1.5 }}
+                        style={{ position: 'absolute', top: '-10%', right: '10%', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', filter: 'blur(60px)' }}
+                    ></motion.div>
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 1.5, delay: 0.2 }}
+                        style={{ position: 'absolute', bottom: '-20%', left: '5%', width: '500px', height: '500px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', filter: 'blur(80px)' }}
+                    ></motion.div>
+                    
+                    <div style={{ position: 'absolute', bottom: '120px', left: '3rem', color: 'white' }}>
+                        <motion.h1 
+                            initial={{ opacity: 0, x: -30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-0.03em', textShadow: '0 10px 20px rgba(0,0,0,0.2)' }}
+                        >
+                            Instructor Space
+                        </motion.h1>
+                        <motion.p 
+                            initial={{ opacity: 0, x: -30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 }}
+                            style={{ fontSize: '1.25rem', opacity: 0.9, fontWeight: 500 }}
+                        >
+                            Welcome back, {user.name.split(' ')[0]}! Ready to inspire today?
+                        </motion.p>
+                    </div>
                 </div>
 
-                <div style={{ padding: '0 3rem 4rem 3rem', maxWidth: '1280px', margin: '0 auto', position: 'relative', top: '-100px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) 2.5fr', gap: '2.5rem' }}>
+                <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    style={{ padding: '0 3rem 4rem 3rem', maxWidth: '1400px', margin: '0 auto', position: 'relative', top: '-80px' }}
+                >
+                    <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '3rem' }}>
                         
-                        {/* LEFT COLUMN: Sticky Profile Card */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        {/* LEFT COLUMN */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
                             <motion.div 
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5 }}
-                                className="card" 
+                                variants={itemVariants}
                                 style={{ 
-                                    background: 'rgba(255, 255, 255, 0.8)', 
+                                    background: 'rgba(255, 255, 255, 0.9)', 
                                     backdropFilter: 'blur(20px)',
-                                    borderRadius: '24px', 
-                                    padding: '3rem 2rem', 
-                                    boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.5) inset', 
+                                    borderRadius: '32px', 
+                                    padding: '3.5rem 2.5rem', 
+                                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.5) inset', 
                                     textAlign: 'center', 
-                                    position: 'relative',
                                     border: '1px solid rgba(255,255,255,0.4)'
                                 }}
                             >
-                                <div style={{ position: 'relative', margin: '0 auto 1.5rem auto', width: '140px', height: '140px' }}>
+                                <div style={{ position: 'relative', margin: '0 auto 2rem auto', width: '160px', height: '160px' }}>
                                     <div style={{ 
                                         width: '100%', height: '100%', borderRadius: '50%', 
                                         background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', 
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                        fontSize: '3rem', fontWeight: 800, color: '#4f46e5', 
-                                        border: '6px solid white', 
-                                        boxShadow: '0 10px 25px rgba(79, 70, 229, 0.25)' 
+                                        fontSize: '3.5rem', fontWeight: 900, color: '#4f46e5', 
+                                        border: '8px solid white', 
+                                        boxShadow: '0 20px 40px rgba(79, 70, 229, 0.15)' 
                                     }}>
                                         {user.avatar ? (
                                             <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
@@ -262,36 +248,35 @@ const InstructorProfile = () => {
                                             user.name?.charAt(0)
                                         )}
                                     </div>
-                                    <button style={{ 
-                                        position: 'absolute', bottom: '5px', right: '5px', 
-                                        background: '#0f172a', color: 'white', border: 'none', 
-                                        borderRadius: '50%', width: '42px', height: '42px', 
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                        cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-                                        transition: 'transform 0.2s'
-                                    }}
-                                    onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                                    onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                    <motion.button 
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        style={{ 
+                                            position: 'absolute', bottom: '8px', right: '8px', 
+                                            background: '#0f172a', color: 'white', border: 'none', 
+                                            borderRadius: '50%', width: '48px', height: '48px', 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                            cursor: 'pointer', boxShadow: '0 10px 15px rgba(0,0,0,0.2)'
+                                        }}
                                     >
-                                        <Camera size={18} />
-                                    </button>
+                                        <Camera size={20} />
+                                    </motion.button>
                                 </div>
                                 
-                                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>{user.name}</h2>
-                                <p style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.25rem 0.75rem', borderRadius: '20px', width: 'fit-content', margin: '0.5rem auto 0 auto' }}>
-                                    {user.preferences?.occupation || 'Instructor'} 
-                                    <CheckCircle size={16} fill="#4f46e5" color="white" />
-                                </p>
+                                <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>{user.name}</h2>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#f0fdf4', padding: '0.5rem 1rem', borderRadius: '24px', width: 'fit-content', margin: '0.5rem auto 0 auto', color: '#15803d', fontWeight: 700, fontSize: '0.9rem' }}>
+                                    {user.preferences?.occupation || 'Expert Instructor'} 
+                                    <CheckCircle size={16} fill="#15803d" color="white" />
+                                </div>
 
-                                {/* Stats Widget */}
-                                <div style={{ margin: '2rem 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1.5rem 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                                <div style={{ margin: '2.5rem 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1.5rem 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }}>
                                     <div>
-                                        <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#0f172a' }}>{stats.courses}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Courses</div>
+                                        <div style={{ fontWeight: 900, fontSize: '1.5rem', color: '#0f172a' }}>{stats.courses}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Courses</div>
                                     </div>
                                     <div>
-                                        <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#0f172a' }}>{stats.rating}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Rating</div>
+                                        <div style={{ fontWeight: 900, fontSize: '1.5rem', color: '#0f172a' }}>{stats.rating}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rating</div>
                                     </div>
                                 </div>
 
@@ -300,57 +285,49 @@ const InstructorProfile = () => {
                                         { icon: Github, link: user.socialLinks?.github, color: '#24292e' },
                                         { icon: Linkedin, link: user.socialLinks?.linkedin, color: '#0077b5' },
                                         { icon: Twitter, link: user.socialLinks?.twitter, color: '#1da1f2' },
-                                        { icon: Globe, link: user.socialLinks?.website, color: '#fbbf24' }
+                                        { icon: Globe, link: user.socialLinks?.website, color: '#6366f1' }
                                     ].map((social, idx) => (
-                                        <a 
+                                        <motion.a 
                                             key={idx} 
+                                            whileHover={social.link ? { y: -5, scale: 1.05 } : {}}
                                             href={social.link || '#'} 
                                             target="_blank" 
                                             rel="noreferrer"
                                             style={{ 
-                                                width: '44px', height: '44px', borderRadius: '12px', 
-                                                background: social.link ? 'white' : '#f1f5f9', 
+                                                width: '52px', height: '52px', borderRadius: '16px', 
+                                                background: social.link ? 'white' : '#f8fafc', 
                                                 color: social.link ? social.color : '#cbd5e1',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
                                                 cursor: social.link ? 'pointer' : 'default',
-                                                boxShadow: social.link ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
+                                                boxShadow: social.link ? '0 10px 15px rgba(0,0,0,0.05)' : 'none',
                                                 border: '1px solid #f1f5f9'
                                             }}
-                                            onMouseOver={e => social.link && (e.currentTarget.style.transform = 'translateY(-3px)')}
-                                            onMouseOut={e => social.link && (e.currentTarget.style.transform = 'translateY(0)')}
                                         >
-                                            <social.icon size={22} strokeWidth={2} />
-                                        </a>
+                                            <social.icon size={22} strokeWidth={2.5} />
+                                        </motion.a>
                                     ))}
                                 </div>
                             </motion.div>
                             
-                            <motion.div 
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.15, duration: 0.5 }}
-                                className="card"
-                                style={{ background: 'white', borderRadius: '24px', padding: '2rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
-                            >
-                                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.5rem', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{ width: '4px', height: '18px', background: '#e11d48', borderRadius: '2px' }}></div>
-                                    Contact Information
+                            <motion.div variants={itemVariants} style={{ background: 'white', borderRadius: '32px', padding: '2.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{ width: '4px', height: '20px', background: '#6366f1', borderRadius: '2px' }}></div>
+                                    Quick Contact
                                 </h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                     {[
                                         { icon: Mail, label: 'Email Address', value: user.email, color: '#3b82f6', bg: '#eff6ff' },
                                         { icon: Phone, label: 'Phone Number', value: user.phone || 'Not provided', color: '#10b981', bg: '#ecfdf5' },
                                         { icon: MapPin, label: 'Location', value: user.location || 'Not provided', color: '#f59e0b', bg: '#fffbeb' },
                                         { icon: Calendar, label: 'Joined Date', value: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A', color: '#6366f1', bg: '#eef2ff' }
                                     ].map((item, idx) => (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div style={{ padding: '10px', background: item.bg, borderRadius: '12px', color: item.color, boxShadow: '0 2px 5px rgba(0,0,0,0.03)' }}>
-                                                <item.icon size={18} />
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                                            <div style={{ padding: '12px', background: item.bg, borderRadius: '14px', color: item.color, boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                                                <item.icon size={20} />
                                             </div>
-                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
-                                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.label}</div>
-                                                <div style={{ fontSize: '0.95rem', fontWeight: 500, color: '#1e293b', marginTop: '2px' }}>{item.value}</div>
+                                            <div style={{ overflow: 'hidden' }}>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>{item.label}</div>
+                                                <div style={{ fontSize: '1rem', fontWeight: 600, color: '#1e293b', marginTop: '2px' }}>{item.value}</div>
                                             </div>
                                         </div>
                                     ))}
@@ -358,173 +335,169 @@ const InstructorProfile = () => {
                             </motion.div>
                         </div>
 
-                        {/* RIGHT COLUMN: Bio and Activity */}
-                        <div style={{ paddingTop: '8rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '2rem' }}>
+                        {/* RIGHT COLUMN */}
+                        <div>
+                            <motion.div variants={itemVariants} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
                                 <div>
-                                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', letterSpacing: '-1px' }}>Overview</h1>
-                                    <p style={{ color: '#64748b', fontSize: '1.1rem' }}>Manage your personal information and public profile.</p>
+                                    <h1 style={{ fontSize: '3rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.5rem', letterSpacing: '-0.03em' }}>Public Overview</h1>
+                                    <p style={{ color: '#64748b', fontSize: '1.1rem', fontWeight: 500 }}>Control how students perceive you in the marketplace.</p>
                                 </div>
-                                <button 
+                                <motion.button 
+                                    whileHover={{ scale: 1.05, translateY: -3 }}
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={() => setIsEditing(true)}
                                     style={{ 
                                         display: 'flex', alignItems: 'center', gap: '0.75rem', 
-                                        padding: '0.85rem 1.75rem', borderRadius: '14px', 
+                                        padding: '1rem 2.25rem', borderRadius: '18px', 
                                         background: '#0f172a', color: 'white', border: 'none', 
-                                        fontWeight: 600, cursor: 'pointer', boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.3)',
-                                        transition: 'all 0.2s ease', fontSize: '0.95rem'
+                                        fontWeight: 700, cursor: 'pointer', boxShadow: '0 20px 25px -5px rgba(15, 23, 42, 0.25)',
+                                        fontSize: '1rem'
                                     }}
-                                    onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 15px 30px -5px rgba(15, 23, 42, 0.4)'; }}
-                                    onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(15, 23, 42, 0.3)'; }}
                                 >
-                                    <Edit2 size={18} /> Edit Profile
-                                </button>
-                            </div>
+                                    <Edit2 size={18} /> Edit Public Profile
+                                </motion.button>
+                            </motion.div>
 
-                            {/* Profile Completion Bar - Enhanced */}
+                            {/* Profile Completion */}
                             <motion.div 
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
-                                style={{ background: 'white', padding: '1.5rem', borderRadius: '20px', marginBottom: '2.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '2rem' }}
+                                variants={itemVariants}
+                                style={{ background: 'white', padding: '2rem', borderRadius: '24px', marginBottom: '3rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '2.5rem', border: '1px solid #f1f5f9' }}
                             >
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                                        <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>Setup Progress</h4>
-                                        <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#4f46e5' }}>{completion}%</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b' }}>Profile Completeness</h4>
+                                        <span style={{ fontSize: '1rem', fontWeight: 900, color: '#4f46e5' }}>{completion}%</span>
                                     </div>
-                                    <div style={{ width: '100%', height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                    <div style={{ width: '100%', height: '14px', background: '#f1f5f9', borderRadius: '7px', overflow: 'hidden' }}>
                                         <motion.div 
                                             initial={{ width: 0 }}
                                             animate={{ width: `${completion}%` }}
-                                            transition={{ duration: 1.2, ease: 'circOut' }}
-                                            style={{ height: '100%', background: 'linear-gradient(90deg, #4f46e5, #ec4899)', borderRadius: '5px' }} 
+                                            transition={{ duration: 1.5, ease: 'circOut' }}
+                                            style={{ height: '100%', background: 'linear-gradient(90deg, #4f46e5, #ec4899, #f59e0b)', borderRadius: '7px' }} 
                                         />
                                     </div>
                                 </div>
-                                <div style={{ minWidth: '180px', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#f0fdf4', borderRadius: '12px', color: '#15803d' }}>
-                                    <CheckCircle size={24} />
-                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>
-                                        {completion === 100 ? "Profile Complete!" : `${100 - completion}% to go!`}
+                                <div style={{ minWidth: '220px', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.5rem', background: '#f0fdf4', borderRadius: '18px', color: '#15803d' }}>
+                                    <div style={{ padding: '8px', background: 'white', borderRadius: '50%', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}><CheckCircle size={24} /></div>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.3 }}>
+                                        {completion === 100 ? "Verified Profile" : `${100 - completion}% for verification`}
                                     </div>
                                 </div>
                             </motion.div>
 
                             <motion.div 
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                                className="card" 
-                                style={{ background: 'white', borderRadius: '24px', padding: '2.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '2.5rem', border: '1px solid #f1f5f9' }}
+                                variants={itemVariants}
+                                style={{ background: 'white', borderRadius: '32px', padding: '3rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05)', marginBottom: '3rem', border: '1px solid #f1f5f9' }}
                             >
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div style={{ padding: '8px', background: '#e0e7ff', borderRadius: '8px', color: '#4f46e5' }}><Briefcase size={22} /></div>
-                                    About {user.name?.split(' ')[0]}
+                                <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{ padding: '12px', background: '#e0e7ff', borderRadius: '14px', color: '#4f46e5' }}><Briefcase size={24} /></div>
+                                    Expert Biography
                                 </h3>
-                                <p style={{ color: '#475569', lineHeight: '1.8', fontSize: '1.05rem' }}>
+                                <p style={{ color: '#475569', lineHeight: '2', fontSize: '1.15rem', fontWeight: 450 }}>
                                     {user.bio || (
-                                        <span style={{ color: '#94a3b8', fontStyle: 'italic', display: 'block', padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                                            No biography provided yet. <br/> <a href="#" onClick={(e) => { e.preventDefault(); setIsEditing(true); }} style={{ color: '#4f46e5', fontWeight: 600 }}>Add a bio</a> to introduce yourself to potential students.
+                                        <span style={{ color: '#94a3b8', fontStyle: 'italic', display: 'block', padding: '3rem', textAlign: 'center', background: '#f8fafc', borderRadius: '20px', border: '2px dashed #e2e8f0' }}>
+                                            Your biography is currently empty. <br/> <a href="#" onClick={(e) => { e.preventDefault(); setIsEditing(true); }} style={{ color: '#4f46e5', fontWeight: 800, textDecoration: 'none', display: 'inline-block', marginTop: '0.5rem' }}>Introduce yourself →</a>
                                         </span>
                                     )}
                                 </p>
                             </motion.div>
 
                              <motion.div 
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.4 }}
-                                style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}
+                                variants={containerVariants}
+                                style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}
                             >
-                                <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '1.5rem', borderRadius: '20px', color: 'white', boxShadow: '0 10px 20px -5px rgba(16, 185, 129, 0.3)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                                        <div style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px' }}><Award size={20} /></div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'rgba(0,0,0,0.1)', padding: '2px 8px', borderRadius: '10px' }}>Top Rated</span>
+                                <motion.div variants={itemVariants} style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', padding: '2rem', borderRadius: '28px', color: 'white', boxShadow: '0 20px 30px -10px rgba(16, 185, 129, 0.4)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1.5rem' }}>
+                                        <div style={{ padding: '10px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px' }}><Award size={24} /></div>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, background: 'rgba(0,0,0,0.15)', padding: '4px 12px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Rated</span>
                                     </div>
-                                    <div style={{ fontSize: '2rem', fontWeight: 800 }}>{stats.rating}</div>
-                                    <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Instructor Rating</div>
-                                </div>
+                                    <div style={{ fontSize: '3rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.rating}</div>
+                                    <div style={{ fontSize: '1rem', opacity: 0.9, fontWeight: 600 }}>Avg. Rating</div>
+                                </motion.div>
 
-                                <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '1.5rem', borderRadius: '20px', color: 'white', boxShadow: '0 10px 20px -5px rgba(245, 158, 11, 0.3)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                                        <div style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px' }}><Users size={20} /></div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'rgba(0,0,0,0.1)', padding: '2px 8px', borderRadius: '10px' }}>Growing</span>
+                                <motion.div variants={itemVariants} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', padding: '2rem', borderRadius: '28px', color: 'white', boxShadow: '0 20px 30px -10px rgba(245, 158, 11, 0.4)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1.5rem' }}>
+                                        <div style={{ padding: '10px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px' }}><Users size={24} /></div>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, background: 'rgba(0,0,0,0.15)', padding: '4px 12px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Global Reach</span>
                                     </div>
-                                    <div style={{ fontSize: '2rem', fontWeight: 800 }}>{stats.students}</div>
-                                    <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Total Students</div>
-                                </div>
+                                    <div style={{ fontSize: '3rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.students}</div>
+                                    <div style={{ fontSize: '1rem', opacity: 0.9, fontWeight: 600 }}>Total Students</div>
+                                </motion.div>
                                 
-                                <div style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', padding: '1.5rem', borderRadius: '20px', color: 'white', boxShadow: '0 10px 20px -5px rgba(99, 102, 241, 0.3)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                                        <div style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '8px' }}><Briefcase size={20} /></div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: 'rgba(0,0,0,0.1)', padding: '2px 8px', borderRadius: '10px' }}>Active</span>
+                                <motion.div variants={itemVariants} style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', padding: '2rem', borderRadius: '28px', color: 'white', boxShadow: '0 20px 30px -10px rgba(99, 102, 241, 0.4)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1.5rem' }}>
+                                        <div style={{ padding: '10px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px' }}><Briefcase size={24} /></div>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, background: 'rgba(0,0,0,0.15)', padding: '4px 12px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Portfolio</span>
                                     </div>
-                                    <div style={{ fontSize: '2rem', fontWeight: 800 }}>{stats.courses}</div>
-                                    <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>Published Courses</div>
-                                </div>
+                                    <div style={{ fontSize: '3rem', fontWeight: 900, marginBottom: '0.25rem' }}>{stats.courses}</div>
+                                    <div style={{ fontSize: '1rem', opacity: 0.9, fontWeight: 600 }}>Live Courses</div>
+                                </motion.div>
                             </motion.div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* EDIT PROFILE MODAL */}
                 <AnimatePresence>
                     {isEditing && (
-                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                             <motion.div 
-                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                initial={{ opacity: 0, scale: 0.9, y: 30 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="card"
-                                style={{ width: '90%', maxWidth: '650px', maxHeight: '90vh', background: 'white', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 50px 100px -20px rgba(0, 0, 0, 0.3)' }}
+                                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                                style={{ width: '95%', maxWidth: '750px', maxHeight: '90vh', background: 'white', borderRadius: '32px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 50px 100px -20px rgba(0, 0, 0, 0.4)' }}
                             >
-                                <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white' }}>
+                                <div style={{ padding: '2rem 2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white' }}>
                                     <div>
-                                        <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>Edit Profile</h2>
-                                        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Update your personal information</p>
+                                        <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>Edit Professional Profile</h2>
+                                        <p style={{ fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>Updates will be visible to students across the platform.</p>
                                     </div>
-                                    <button onClick={() => setIsEditing(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }} onMouseOver={e => {e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#1e293b';}} onMouseOut={e => {e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#64748b';}}>
-                                        <X size={20} />
-                                    </button>
+                                    <motion.button 
+                                        whileHover={{ scale: 1.1, background: '#fee2e2', color: '#ef4444' }}
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => setIsEditing(false)} 
+                                        style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }}
+                                    >
+                                        <X size={24} />
+                                    </motion.button>
                                 </div>
 
-                                <div style={{ padding: '2rem', overflowY: 'auto' }}>
+                                <div style={{ padding: '2.5rem', overflowY: 'auto' }}>
                                     <form id="profile-form" onSubmit={handleSave}>
-                                        <div style={{ marginBottom: '2.5rem' }}>
-                                            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                <div style={{ width: '24px', height: '24px', background: '#eff6ff', borderRadius: '6px', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={14} /></div>
+                                        <div style={{ marginBottom: '3rem' }}>
+                                            <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                <div style={{ width: '32px', height: '32px', background: '#eff6ff', borderRadius: '10px', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} /></div>
                                                 Personal Details
                                             </h3>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                                <ModalField label="Phone Number" icon={Phone} name="phone" placeholder="+1 (555) 000-0000" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-                                                <ModalField label="Location" icon={MapPin} name="location" placeholder="San Francisco, CA" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                                <ModalField label="Phone Number" icon={Phone} name="phone" placeholder="+91 98765 43210" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                                                <ModalField label="Location" icon={MapPin} name="location" placeholder="Mumbai, India" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
                                             </div>
                                             
-                                            <ModalField label="Headline / Expertise" icon={Briefcase} name="occupation" placeholder="e.g. Senior React Developer" value={formData.occupation} onChange={(e) => setFormData({...formData, occupation: e.target.value})} />
+                                            <ModalField label="Professional Headline" icon={Briefcase} name="occupation" placeholder="e.g. Senior Full Stack Engineer & Instructor" value={formData.occupation} onChange={(e) => setFormData({...formData, occupation: e.target.value})} />
                                             
-                                            <div style={{ marginTop: '0.5rem' }}>
-                                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.5px' }}>Short Biography</label>
+                                            <div style={{ marginTop: '1rem' }}>
+                                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 900, color: '#475569', marginBottom: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Professional Biography</label>
                                                 <textarea 
                                                     value={formData.bio}
                                                     onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                                                    placeholder="Tell students about your experience..."
+                                                    placeholder="Share your experience, achievements, and teaching philosophy..."
                                                     style={{ 
-                                                        width: '100%', minHeight: '120px', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', background: '#f8fafc', color: '#1e293b', fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical',
-                                                        transition: 'all 0.2s'
+                                                        width: '100%', minHeight: '160px', padding: '1.25rem', borderRadius: '18px', border: '1px solid #e2e8f0', outline: 'none', background: '#f8fafc', color: '#1e293b', fontSize: '1rem', fontFamily: 'inherit', resize: 'vertical',
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', lineHeight: '1.6'
                                                     }}
-                                                    onFocus={(e) => { e.target.style.borderColor = '#6366f1'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; }}
+                                                    onFocus={(e) => { e.target.style.borderColor = '#6366f1'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.1)'; }}
                                                     onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
                                                 />
-                                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.4rem', textAlign: 'right' }}>Max 500 characters</p>
                                             </div>
                                         </div>
 
                                         <div>
-                                            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                <div style={{ width: '24px', height: '24px', background: '#f5f3ff', borderRadius: '6px', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Globe size={14} /></div>
-                                                Social Presence
+                                            <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                <div style={{ width: '32px', height: '32px', background: '#f5f3ff', borderRadius: '10px', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Globe size={18} /></div>
+                                                Online Presence
                                             </h3>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                                                 <ModalField label="Website" icon={Globe} name="website" placeholder="https://yourportfolio.com" value={formData.website} onChange={(e) => setFormData({...formData, website: e.target.value})} />
                                                 <ModalField label="GitHub" icon={Github} name="github" placeholder="github.com/username" value={formData.github} onChange={(e) => setFormData({...formData, github: e.target.value})} />
                                                 <ModalField label="LinkedIn" icon={Linkedin} name="linkedin" placeholder="linkedin.com/in/username" value={formData.linkedin} onChange={(e) => setFormData({...formData, linkedin: e.target.value})} />
@@ -534,11 +507,22 @@ const InstructorProfile = () => {
                                     </form>
                                 </div>
 
-                                <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid #f1f5f9', background: '#ffffff', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                    <button onClick={() => setIsEditing(false)} style={{ padding: '0.85rem 1.75rem', borderRadius: '12px', background: 'white', border: '1px solid #e2e8f0', color: '#475569', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'white'}>Cancel</button>
-                                    <button form="profile-form" type="submit" style={{ padding: '0.85rem 2rem', borderRadius: '12px', background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', color: 'white', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)', transition: 'all 0.2s' }} onMouseOver={e => {e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 15px rgba(79, 70, 229, 0.4)'}} onMouseOut={e => {e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'}}>
-                                        <Save size={18} /> Save Details
-                                    </button>
+                                <div style={{ padding: '2rem 2.5rem', borderTop: '1px solid #f1f5f9', background: '#ffffff', display: 'flex', justifyContent: 'flex-end', gap: '1.25rem' }}>
+                                    <motion.button 
+                                        whileHover={{ background: '#f1f5f9' }}
+                                        onClick={() => setIsEditing(false)} 
+                                        style={{ padding: '1rem 2rem', borderRadius: '16px', background: 'white', border: '1px solid #e2e8f0', color: '#475569', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                        Discard
+                                    </motion.button>
+                                    <motion.button 
+                                        whileHover={{ scale: 1.05, translateY: -3, boxShadow: '0 15px 30px rgba(79, 70, 229, 0.4)' }}
+                                        whileTap={{ scale: 0.95 }}
+                                        form="profile-form" type="submit" 
+                                        style={{ padding: '1rem 2.5rem', borderRadius: '16px', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 10px 20px rgba(79, 70, 229, 0.3)' }}
+                                    >
+                                        <Save size={20} /> Update Profile
+                                    </motion.button>
                                 </div>
                             </motion.div>
                         </div>

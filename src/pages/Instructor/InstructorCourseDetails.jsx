@@ -4,7 +4,8 @@ import InstructorSidebar from '../../components/Instructor/InstructorSidebar';
 import { 
     LayoutDashboard, FileText, Video, ClipboardList, GraduationCap, Users, 
     Plus, Trash2, Search, ArrowLeft, MoreVertical, Edit, Upload, Download,
-    CheckCircle, X, Check, HelpCircle, PlusCircle, Clock, Loader2, Sparkles, FileUp, Square, CheckSquare, Eye
+    CheckCircle, X, Check, HelpCircle, PlusCircle, Clock, Loader2, Sparkles, FileUp, Square, CheckSquare, Eye,
+    Mail, MapPin, Calendar, ChevronRight, BarChart3, Star, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -59,7 +60,7 @@ const InstructorCourseDetails = () => {
     // Gradebook State
     const [gradebookData, setGradebookData] = useState([]);
     const [gradebookLoading, setGradebookLoading] = useState(false);
-     const [gradebookFilter, setGradebookFilter] = useState('all');
+    const [gradebookFilter, setGradebookFilter] = useState('all');
 
     // Modal States
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -67,6 +68,8 @@ const InstructorCourseDetails = () => {
     const [showQuizModal, setShowQuizModal] = useState(false);
     const [selectedStudentForGrading, setSelectedStudentForGrading] = useState(null);
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, type: '', id: null });
+    const [viewingAssessment, setViewingAssessment] = useState(null);
+    const [viewingContentDetails, setViewingContentDetails] = useState(null);
 
     const openConfirmModal = (type, id) => {
         setConfirmModalState({ isOpen: true, type, id });
@@ -80,11 +83,8 @@ const InstructorCourseDetails = () => {
         fetchCourseDetails();
     }, [id]);
 
-    const [viewingAssessment, setViewingAssessment] = useState(null);
-    const [viewingContentDetails, setViewingContentDetails] = useState(null);
-
     useEffect(() => {
-        if (activeTab === 'gradebook') {
+        if (activeTab === 'gradebook' || activeTab === 'students') {
             fetchGradebook();
         }
     }, [activeTab]);
@@ -123,7 +123,10 @@ const InstructorCourseDetails = () => {
     // --- Content Handlers ---
     const handleUploadContent = async (e) => {
         e.preventDefault();
-        if (!uploadFile) return;
+        if (!uploadFile) {
+            toast.error('Please select a file');
+            return;
+        }
 
         const formData = new FormData();
         formData.append('file', uploadFile);
@@ -170,7 +173,6 @@ const InstructorCourseDetails = () => {
                 const updatedContent = await res.json();
                 setCourse({ ...course, content: updatedContent });
                 toast.success('Content deleted');
-                // Remove from selected list if it was selected
                 setSelectedContents(prev => prev.filter(id => id !== contentId));
             }
         } catch (err) {
@@ -179,11 +181,11 @@ const InstructorCourseDetails = () => {
         }
     };
 
-    const handleSelectAllContent = (e) => {
-        if (e.target.checked) {
-            setSelectedContents(course?.content?.map(item => item._id) || []);
-        } else {
+    const handleSelectAllContent = () => {
+        if (selectedContents.length === course?.content?.length) {
             setSelectedContents([]);
+        } else {
+            setSelectedContents(course?.content?.map(item => item._id) || []);
         }
     };
 
@@ -201,7 +203,7 @@ const InstructorCourseDetails = () => {
     };
 
     const performDeleteBulkContent = async () => {
-        setIsSavingSyllabus(true);
+        setUploading(true);
         try {
             const res = await fetch(`http://localhost:5000/api/courses/${id}/content/bulk-delete`, {
                 method: 'POST',
@@ -222,7 +224,7 @@ const InstructorCourseDetails = () => {
             console.error(err);
             toast.error('Bulk delete error');
         } finally {
-            setIsSavingSyllabus(false);
+            setUploading(false);
         }
     };
 
@@ -321,7 +323,7 @@ const InstructorCourseDetails = () => {
             if (res.ok) {
                 const updatedContent = await res.json();
                 setCourse({ ...course, content: updatedContent });
-                toast.success('Syllabus successfully added to your course structure!');
+                toast.success('Syllabus successfully added!');
                 setShowSyllabusModal(false);
                 setSyllabusStep('input');
                 setSyllabusTopic('');
@@ -360,13 +362,13 @@ const InstructorCourseDetails = () => {
                 const updatedAssignments = await res.json();
                 setCourse({ ...course, assignments: updatedAssignments });
                 setAssignmentForm({ title: '', description: '', dueDate: '' });
-                setEditingAssignment(null); // Reset editing state
+                setEditingAssignment(null);
                 toast.success(editingAssignment ? 'Assignment updated!' : 'Assignment posted!');
                 setShowAssignmentModal(false);
             }
         } catch (err) {
             console.error(err);
-            toast.error(editingAssignment ? 'Failed to update assignment' : 'Failed to post assignment');
+            toast.error('Failed to process assignment');
         } finally {
             setUploading(false);
         }
@@ -380,10 +382,6 @@ const InstructorCourseDetails = () => {
             dueDate: assign.dueDate ? assign.dueDate.split('T')[0] : ''
         });
         setShowAssignmentModal(true);
-    };
-
-    const handleDeleteAssignment = (assignId) => {
-        openConfirmModal('assignment', assignId);
     };
 
     const performDeleteAssignment = async (assignId) => {
@@ -421,13 +419,13 @@ const InstructorCourseDetails = () => {
                 const updatedQuizzes = await res.json();
                 setCourse({ ...course, quizzes: updatedQuizzes });
                 setQuizForm({ title: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] });
-                setEditingQuiz(null); // Reset editing state
+                setEditingQuiz(null);
                 toast.success(editingQuiz ? 'Quiz updated!' : 'Quiz created!');
                 setShowQuizModal(false);
             }
         } catch (err) {
             console.error(err);
-            toast.error(editingQuiz ? 'Failed to update quiz' : 'Failed to create quiz');
+            toast.error('Failed to process quiz');
         } finally {
             setUploading(false);
         }
@@ -440,10 +438,6 @@ const InstructorCourseDetails = () => {
             questions: quiz.questions || []
         });
         setShowQuizModal(true);
-    };
-
-    const handleDeleteQuiz = (quizId) => {
-        openConfirmModal('quiz', quizId);
     };
 
     const performDeleteQuiz = async (quizId) => {
@@ -459,7 +453,6 @@ const InstructorCourseDetails = () => {
         }
     };
 
-     // Quiz Form Helpers
     const handleAddQuestion = () => {
         setQuizForm({ ...quizForm, questions: [...quizForm.questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }] });
     };
@@ -471,6 +464,10 @@ const InstructorCourseDetails = () => {
     const handleOptionChange = (qIndex, oIndex, value) => {
         const newQuestions = [...quizForm.questions];
         newQuestions[qIndex].options[oIndex] = value;
+        setQuizForm({ ...quizForm, questions: newQuestions });
+    };
+    const handleRemoveQuestion = (index) => {
+        const newQuestions = quizForm.questions.filter((_, i) => i !== index);
         setQuizForm({ ...quizForm, questions: newQuestions });
     };
 
@@ -490,726 +487,596 @@ const InstructorCourseDetails = () => {
 
             if (res.ok) {
                 const generatedQuestions = await res.json();
-                setQuizForm({
-                    ...quizForm,
-                    questions: generatedQuestions
-                });
-                toast.success("AI significantly boosted your quiz creation!");
+                setQuizForm({ ...quizForm, questions: generatedQuestions });
+                toast.success("AI generated professional quiz questions!");
             } else {
-                const error = await res.json();
-                toast.error(error.msg || "AI Generation failed");
+                toast.error("AI Generation failed");
             }
         } catch (err) {
             console.error(err);
-            toast.error("Failed to connect to AI service");
+            toast.error("AI Service Error");
         } finally {
             setIsGeneratingAIQuiz(false);
         }
     };
-    const handleRemoveQuestion = (index) => {
-        const newQuestions = quizForm.questions.filter((_, i) => i !== index);
-        setQuizForm({ ...quizForm, questions: newQuestions });
-    };
-
-    if (loading) return <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-main)'}}>Loading...</div>;
-
-
-    // ... (keep existing handlers) ...
 
     const confirmDeletion = () => {
-        const { type, id } = confirmModalState;
-        if (type === 'content') performDeleteContent(id);
-        else if (type === 'assignment') performDeleteAssignment(id);
-        else if (type === 'quiz') performDeleteQuiz(id);
+        const { type, id: targetId } = confirmModalState;
+        if (type === 'content') performDeleteContent(targetId);
+        else if (type === 'assignment') performDeleteAssignment(targetId);
+        else if (type === 'quiz') performDeleteQuiz(targetId);
         else if (type === 'bulk-content') performDeleteBulkContent();
-        else closeConfirmModal();
+        closeConfirmModal();
     };
 
-    const getConfirmMessage = () => {
-        const { type } = confirmModalState;
-        if (type === 'content') return 'Are you sure you want to permanently delete this content module from the course? This action cannot be undone.';
-        if (type === 'bulk-content') return `Are you sure you want to permanently delete these ${selectedContents.length} items? This action cannot be undone.`;
-        if (type === 'assignment') return 'Are you sure you want to permanently delete this assignment? Student submissions may be affected.';
-        if (type === 'quiz') return 'Are you sure you want to permanently delete this quiz? Student attempts may be affected.';
-        return 'Are you sure you want to delete this item?';
-    };
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                        <Loader2 size={48} color="#6366f1" />
+                    </motion.div>
+                    <p style={{ marginTop: '1rem', fontWeight: 600, color: '#64748b' }}>Loading Course Environment...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div style={{ display: 'flex', background: 'var(--bg-main)', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ display: 'flex', background: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
             <InstructorSidebar />
             
-            <main style={{ flex: 1, height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                
-                {/* Top Header */}
-                <div style={{ padding: '1.5rem 3rem', background: 'var(--bg-card)', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                    <div>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                            <button onClick={() => navigate('/instructor/courses')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: 0 }}>
-                                <ArrowLeft size={18} />
-                            </button>
-                            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-title)', margin: 0 }}>{course?.title}</h1>
-                            <span style={{ padding: '0.25rem 0.75rem', background: 'var(--success-light)', color: '#166534', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>{course?.status || 'Active'}</span>
-                         </div>
-                         <div style={{ display: 'flex', gap: '1.5rem', color: 'var(--text-light)', fontSize: '0.85rem', marginLeft: '2rem' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Users size={14}/> {course?.students || 0} Students</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FileText size={14}/> {course?.content?.length || 0} Lessons</span>
-                        </div>
-                    </div>
-                    <div>
-                        {/* Course Level Actions */}
+            <main style={{ flex: 1, padding: '2.5rem', overflowX: 'hidden' }}>
+                {/* Immersive Header */}
+                <div style={{ marginBottom: '3rem', position: 'relative' }}>
+                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#64748b', marginBottom: '1.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                        <button onClick={() => navigate('/instructor/courses')} style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <ArrowLeft size={16} /> Courses
+                        </button>
+                        <span>/</span>
+                        <span style={{ color: '#0f172a' }}>{course.title}</span>
+                    </motion.div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                                <h1 style={{ fontSize: '3rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.03em' }}>{course.title}</h1>
+                                <span style={{ padding: '6px 16px', background: '#ecfdf5', color: '#059669', borderRadius: '100px', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', border: '1px solid #d1fae5' }}>Active</span>
+                            </div>
+                            <p style={{ fontSize: '1.15rem', color: '#64748b', maxWidth: '800px', fontWeight: 500, lineHeight: 1.6 }}>{course.description}</p>
+                        </motion.div>
+
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ display: 'flex', gap: '1rem' }}>
+                            <div style={{ background: 'white', padding: '1.25rem 2rem', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a' }}>{course.students || 0}</div>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Learners</div>
+                            </div>
+                            <div style={{ background: 'white', padding: '1.25rem 2rem', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a' }}>{course.content?.length || 0}</div>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Modules</div>
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                    
-                    {/* Vertical Side Navigation */}
-                    <div style={{ width: '260px', background: 'var(--bg-card)', borderRight: '1px solid #e2e8f0', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
-                        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-lighter)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', paddingLeft: '0.75rem' }}>Manage Course</h3>
-                        
-                        <button 
-                            onClick={() => setActiveTab('content')}
-                            style={{ 
-                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', 
-                                width: '100%', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                                background: activeTab === 'content' ? '#eff6ff' : 'transparent',
-                                color: activeTab === 'content' ? '#2563eb' : 'var(--text-muted)',
-                                fontWeight: activeTab === 'content' ? 600 : 500,
-                                fontSize: '1rem',
-                                transition: 'all 0.2s'
+                {/* Premium Tab Navigation */}
+                <div style={{ marginBottom: '2.5rem', background: '#f1f5f9', padding: '0.5rem', borderRadius: '20px', display: 'inline-flex', gap: '0.5rem' }}>
+                    {[
+                        { id: 'content', icon: FileText, label: 'Curriculum' },
+                        { id: 'assessments', icon: ClipboardList, label: 'Assessments' },
+                        { id: 'gradebook', icon: GraduationCap, label: 'Gradebook' },
+                        { id: 'students', icon: Users, label: 'Learners' }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1.75rem',
+                                borderRadius: '16px', border: 'none', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                background: activeTab === tab.id ? 'white' : 'transparent',
+                                color: activeTab === tab.id ? '#0f172a' : '#64748b',
+                                fontWeight: 800, fontSize: '0.95rem',
+                                boxShadow: activeTab === tab.id ? '0 10px 15px -3px rgba(0,0,0,0.05)' : 'none'
                             }}
                         >
-                            <FileText size={18} /> Content
+                            <tab.icon size={20} /> {tab.label}
                         </button>
-                        <button 
-                            onClick={() => setActiveTab('assessments')}
-                            style={{ 
-                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', 
-                                width: '100%', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                                background: activeTab === 'assessments' ? '#eff6ff' : 'transparent',
-                                color: activeTab === 'assessments' ? '#2563eb' : 'var(--text-muted)',
-                                fontWeight: activeTab === 'assessments' ? 600 : 500,
-                                fontSize: '1rem',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <ClipboardList size={18} /> Assessments
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('gradebook')}
-                            style={{ 
-                                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', 
-                                width: '100%', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                                background: activeTab === 'gradebook' ? '#eff6ff' : 'transparent',
-                                color: activeTab === 'gradebook' ? '#2563eb' : 'var(--text-muted)',
-                                fontWeight: activeTab === 'gradebook' ? 600 : 500,
-                                fontSize: '1rem',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <GraduationCap size={18} /> Gradebook
-                        </button>
-                    </div>
+                    ))}
+                </div>
 
-                    {/* Main Content View */}
-                    <div style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto', background: 'var(--bg-main)' }}>
-                        
-                        {/* --- CONTENT TAB --- */}
-                        {activeTab === 'content' && (
-                            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                    <div>
-                                        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Course Content</h2>
-                                        <p style={{ color: 'var(--text-light)', marginTop: '0.25rem' }}>Manage your lessons and materials.</p>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <button 
-                                            onClick={() => { setSyllabusTopic(course?.title || ''); setShowSyllabusModal(true); }}
-                                            className="btn"
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.3)' }}
-                                            title="Auto-generate a complete syllabus structure using AI"
-                                        >
-                                            <Sparkles size={18} /> AI Structure Builder
-                                        </button>
-                                        <button 
-                                            onClick={() => setShowUploadModal(true)}
-                                            className="btn btn-primary"
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)' }}
-                                        >
-                                            <Plus size={20} /> Add Content
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {course?.content?.length > 0 && (
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', background: 'var(--bg-card)', padding: '1rem 1.75rem', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px -2px rgba(0,0,0,0.02)' }}>
-                                        <div 
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
-                                            onClick={() => handleSelectAllContent({ target: { checked: selectedContents.length !== course.content.length } })}
-                                        >
-                                            {selectedContents.length > 0 && selectedContents.length === course.content.length ? (
-                                                <CheckSquare size={20} color="#2563eb" fill="#eff6ff" style={{ transition: 'all 0.2s' }} />
-                                            ) : (
-                                                <Square size={20} color="#94a3b8" style={{ transition: 'all 0.2s' }} />
-                                            )}
-                                            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', userSelect: 'none' }}>Select All Modules</span>
+                {/* Tab Content Section */}
+                <div style={{ background: 'white', borderRadius: '32px', padding: '2.5rem', border: '1px solid #f1f5f9', boxShadow: '0 20px 50px -12px rgba(0,0,0,0.03)' }}>
+                    <AnimatePresence mode="wait">
+                        <motion.div key={activeTab} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
+                            
+                            {/* Curriculum Tab */}
+                            {activeTab === 'content' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Course Curriculum</h2>
+                                            <p style={{ color: '#64748b', fontWeight: 500 }}>Structure your course with high-quality modules and materials</p>
                                         </div>
-                                        
-                                        <AnimatePresence>
-                                            {selectedContents.length > 0 && (
-                                                <motion.div initial={{ opacity: 0, scale: 0.95, x: 10 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.95, x: 10 }}>
-                                                    <button 
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            <AnimatePresence>
+                                                {selectedContents.length > 0 && (
+                                                    <motion.button
+                                                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
                                                         onClick={handleBulkDeleteContent}
-                                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(239, 68, 68, 0.1)' }}
+                                                        style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fee2e2', padding: '0 1.25rem', borderRadius: '14px', height: '48px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}
                                                     >
-                                                        <Trash2 size={16} /> Delete Selected ({selectedContents.length})
-                                                    </button>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                                        <Trash2 size={18} /> Delete Selected ({selectedContents.length})
+                                                    </motion.button>
+                                                )}
+                                            </AnimatePresence>
+                                            <button onClick={() => setShowSyllabusModal(true)} style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '0 1.25rem', borderRadius: '14px', height: '48px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
+                                                <Sparkles size={18} /> AI Syllabus Builder
+                                            </button>
+                                            <button onClick={() => setShowUploadModal(true)} style={{ background: '#0f172a', color: 'white', border: 'none', padding: '0 1.5rem', borderRadius: '14px', height: '48px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)' }}>
+                                                <PlusCircle size={18} /> Add Module
+                                            </button>
+                                        </div>
                                     </div>
-                                )}
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {course?.content?.length > 0 ? (
-                                        course.content.map((item, index) => (
-                                            <motion.div 
-                                                key={item._id} 
-                                                initial={{ opacity: 0, y: 10 }} 
-                                                animate={{ opacity: 1, y: 0 }} 
-                                                transition={{ delay: index * 0.05 }}
-                                                className="card" 
-                                                style={{ 
-                                                    padding: '1.5rem', background: selectedContents.includes(item._id) ? '#f8fafc' : 'var(--bg-card)', 
-                                                    borderRadius: '12px', border: selectedContents.includes(item._id) ? '1px solid #cbd5e1' : '1px solid #e2e8f0', 
-                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    boxShadow: '0 2px 4px -2px rgba(0,0,0,0.05)', transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                                                    <div 
-                                                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
-                                                        onClick={() => handleSelectContent(item._id)}
-                                                    >
-                                                        {selectedContents.includes(item._id) ? (
-                                                            <CheckSquare size={20} color="#2563eb" fill="#eff6ff" />
-                                                        ) : (
-                                                            <Square size={20} color="#cbd5e1" />
-                                                        )}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+                                        {course.content && course.content.length > 0 && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0 1.5rem', marginBottom: '0.5rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={handleSelectAllContent}>
+                                                    <div style={{ width: '20px', height: '20px', borderRadius: '6px', border: '2px solid #cbd5e1', background: selectedContents.length === course.content.length ? '#0f172a' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                                                        {selectedContents.length === course.content.length && <Check size={14} color="white" strokeWidth={4} />}
                                                     </div>
-                                                    <div style={{ 
-                                                        width: '50px', height: '50px', 
-                                                        background: item.type === 'video' ? '#eff6ff' : '#f0fdf4', 
-                                                        color: item.type === 'video' ? '#2563eb' : '#16a34a',
-                                                        borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' 
-                                                    }}>
-                                                        {item.type === 'video' ? <Video size={24}/> : <FileText size={24}/>}
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select All Items</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {course.content && course.content.length > 0 ? (
+                                            course.content.map((item, idx) => (
+                                                <motion.div
+                                                    key={item._id}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: idx * 0.05 }}
+                                                    whileHover={{ scale: 1.002, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)' }}
+                                                    style={{ background: 'white', padding: '1.5rem 2rem', borderRadius: '24px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '1.5rem', position: 'relative', transition: 'all 0.2s' }}
+                                                >
+                                                    <div onClick={() => handleSelectContent(item._id)} style={{ width: '22px', height: '22px', borderRadius: '7px', border: '2px solid #e2e8f0', background: selectedContents.includes(item._id) ? '#0f172a' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                                                        {selectedContents.includes(item._id) && <Check size={14} color="white" strokeWidth={4} />}
                                                     </div>
-                                                    <div>
-                                                        <h4 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-main)' }}>{item.title}</h4>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.25rem' }}>
-                                                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-lighter)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.type}</span>
+                                                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: item.type === 'video' ? '#fef2f2' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: item.type === 'video' ? '#ef4444' : '#3b82f6', border: `1px solid ${item.type === 'video' ? '#fee2e2' : '#dbeafe'}` }}>
+                                                        {item.type === 'video' ? <Video size={24} /> : <FileText size={24} />}
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>{item.title}</h3>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '2px 10px', borderRadius: '10px', background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', textTransform: 'uppercase' }}>{item.type}</span>
                                                         </div>
                                                     </div>
+                                                    <div style={{ display: 'flex', gap: '0.6rem' }}>
+                                                        <button onClick={() => setViewingContentDetails(item)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Eye size={18} /></button>
+                                                        <button onClick={() => handleEditContent(item)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Edit size={18} /></button>
+                                                        <button onClick={() => handleDeleteContent(item._id)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'white', border: '1px solid #fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                                    </div>
+                                                </motion.div>
+                                            ))
+                                        ) : (
+                                            <div style={{ textAlign: 'center', padding: '6rem', background: '#f8fafc', borderRadius: '32px', border: '2px dashed #e2e8f0' }}>
+                                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', color: '#cbd5e1', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)' }}>
+                                                    <FileUp size={40} />
                                                 </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button onClick={() => setViewingContentDetails(item)} style={{ padding: '0.6rem', color: '#10b981', background: '#d1fae5', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }} title="View Details"><Eye size={18} /></button>
-                                                    <button onClick={() => handleEditContent(item)} style={{ padding: '0.6rem', color: '#3b82f6', background: 'var(--primary-light)', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }} title="Edit"><Edit size={18} /></button>
-                                                    <button onClick={() => handleDeleteContent(item._id)} style={{ padding: '0.6rem', color: '#ef4444', background: '#fee2e2', border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }} title="Delete"><Trash2 size={18} /></button>
+                                                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.5rem' }}>Build Your Curriculum</h3>
+                                                <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto 2rem auto', fontWeight: 500, lineHeight: 1.6 }}>Create a rich learning experience by adding video lectures, PDFs, and study materials manually or using our AI builder.</p>
+                                                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                                                    <button onClick={() => setShowSyllabusModal(true)} style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '0.8rem 1.5rem', borderRadius: '14px', fontWeight: 800, cursor: 'pointer' }}>Use AI Builder</button>
+                                                    <button onClick={() => setShowUploadModal(true)} style={{ background: '#0f172a', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '14px', fontWeight: 800, cursor: 'pointer' }}>Add Manually</button>
                                                 </div>
-                                            </motion.div>
-                                        ))
-                                    ) : (
-                                        <div style={{ padding: '4rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '16px', border: '2px dashed #e2e8f0', color: 'var(--text-lighter)' }}>
-                                            <div style={{ width: '80px', height: '80px', background: 'var(--bg-secondary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-                                                <Upload size={32} style={{ opacity: 0.5 }} />
                                             </div>
-                                            <h3 style={{ color: 'var(--text-main)', marginBottom: '0.5rem' }}>No contents yet</h3>
-                                            <p style={{ maxWidth: '300px', margin: '0 auto 1.5rem' }}>Get started by uploading your first video lesson or auto-generating a structure with AI.</p>
-                                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                                                <button onClick={() => { setSyllabusTopic(course?.title || ''); setShowSyllabusModal(true); }} style={{ color: '#8b5cf6', fontWeight: 600, background: '#f5f3ff', border: '1px solid #ddd6fe', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Sparkles size={16}/> Build with AI</button>
-                                                <button onClick={() => setShowUploadModal(true)} style={{ color: '#2563eb', fontWeight: 600, background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Plus size={16}/> Upload Material</button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Assessments Tab */}
+                            {activeTab === 'assessments' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Assessments</h2>
+                                            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
+                                                <button onClick={() => setAssessmentTab('assignments')} style={{ background: 'none', border: 'none', padding: '0 0 0.5rem 0', color: assessmentTab === 'assignments' ? '#6366f1' : '#94a3b8', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', borderBottom: assessmentTab === 'assignments' ? '3px solid #6366f1' : '3px solid transparent', transition: 'all 0.2s' }}>Assignments</button>
+                                                <button onClick={() => setAssessmentTab('quizzes')} style={{ background: 'none', border: 'none', padding: '0 0 0.5rem 0', color: assessmentTab === 'quizzes' ? '#6366f1' : '#94a3b8', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', borderBottom: assessmentTab === 'quizzes' ? '3px solid #6366f1' : '3px solid transparent', transition: 'all 0.2s' }}>Quizzes</button>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- ASSESSMENTS TAB --- */}
-                        {activeTab === 'assessments' && (
-                            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                                    <div>
-                                        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Assessments</h2>
-                                        <p style={{ color: 'var(--text-light)', marginTop: '0.25rem' }}>Manage assignments and quizzes.</p>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <button 
-                                            onClick={() => setShowAssignmentModal(true)}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', background: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-                                        >
-                                            <Plus size={18} /> Assignment
-                                        </button>
-                                        <button 
-                                            onClick={() => setShowQuizModal(true)}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)' }}
-                                        >
-                                            <Plus size={18} /> Quiz
+                                        <button onClick={() => assessmentTab === 'assignments' ? setShowAssignmentModal(true) : setShowQuizModal(true)} style={{ background: '#6366f1', color: 'white', border: 'none', padding: '0 1.5rem', borderRadius: '14px', height: '48px', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.2)' }}>
+                                            <Plus size={20} /> Create {assessmentTab === 'assignments' ? 'Assignment' : 'Quiz'}
                                         </button>
                                     </div>
-                                </div>
 
-                                {/* Assessments Sub-navigation */}
-                                <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0', marginBottom: '2rem' }}>
-                                    <button 
-                                        onClick={() => setAssessmentTab('assignments')}
-                                        style={{ 
-                                            padding: '0.75rem 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
-                                            color: assessmentTab === 'assignments' ? '#2563eb' : 'var(--text-light)',
-                                            fontWeight: assessmentTab === 'assignments' ? 600 : 500,
-                                            borderBottom: assessmentTab === 'assignments' ? '2px solid #2563eb' : '2px solid transparent'
-                                        }}
-                                    >
-                                        Assignments
-                                    </button>
-                                    <button 
-                                        onClick={() => setAssessmentTab('quizzes')}
-                                        style={{ 
-                                            padding: '0.75rem 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.95rem',
-                                            color: assessmentTab === 'quizzes' ? '#2563eb' : 'var(--text-light)',
-                                            fontWeight: assessmentTab === 'quizzes' ? 600 : 500,
-                                            borderBottom: assessmentTab === 'quizzes' ? '2px solid #2563eb' : '2px solid transparent'
-                                        }}
-                                    >
-                                        Quizzes
-                                    </button>
-                                </div>
-
-                                <div style={{ display: 'grid', gap: '2rem' }}>
-                                    
-                                    {/* Assignments View */}
-                                    {assessmentTab === 'assignments' && (
-                                        <div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                                {course?.assignments?.length > 0 ? course.assignments.map(assign => (
-                                                    <motion.div 
-                                                        key={assign._id} 
-                                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
-                                                        className="card" 
-                                                        style={{ padding: '1.5rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid #e2e8f0', position: 'relative', cursor: 'pointer', transition: 'transform 0.2s' }}
-                                                        onClick={() => setViewingAssessment({ ...assign, type: 'assignment' })}
-                                                        whileHover={{ y: -2 }}
-                                                    >
-                                                         <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
-                                                            <button onClick={(e) => { e.stopPropagation(); handleEditAssignment(assign); }} style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }} className="hover:text-blue-500"><Edit size={16} /></button>
-                                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteAssignment(assign._id); }} style={{ color: 'var(--text-lighter)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }} className="hover:text-red-500"><Trash2 size={16} /></button>
-                                                         </div>
-                                                         <div style={{ width: '40px', height: '40px', background: '#e0f2fe', color: '#0369a1', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                                                             <FileText size={20} />
-                                                         </div>
-                                                         <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.5rem' }}>{assign.title}</h4>
-                                                         <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', lineHeight: '1.5', marginBottom: '1rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{assign.description}</p>
-                                                         {assign.dueDate && <div style={{ fontSize: '0.8rem', color: '#d97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Clock size={14} /> Due: {new Date(assign.dueDate).toLocaleDateString()}</div>}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                                        {assessmentTab === 'assignments' ? (
+                                            course.assignments?.length > 0 ? (
+                                                course.assignments.map((assign, idx) => (
+                                                    <motion.div key={assign._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} style={{ background: 'white', padding: '1.75rem', borderRadius: '24px', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0369a1' }}><ClipboardList size={24} /></div>
+                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                <button onClick={() => handleEditAssignment(assign)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer' }}><Edit size={16} /></button>
+                                                                <button onClick={() => openConfirmModal('assignment', assign._id)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #fee2e2', background: 'white', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{assign.title}</h3>
+                                                        </div>
+                                                        <div style={{ marginTop: 'auto', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#b45309', fontSize: '0.85rem', fontWeight: 700 }}><Clock size={16} /> Due {new Date(assign.dueDate).toLocaleDateString()}</div>
+                                                            <button onClick={() => setViewingAssessment({...assign, type: 'assignment'})} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}>View Details</button>
+                                                        </div>
                                                     </motion.div>
-                                                )) : (
-                                                    <div style={{ gridColumn: '1/-1', padding: '4rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '16px', border: '2px dashed #e2e8f0', color: 'var(--text-lighter)' }}>
-                                                        <FileText size={32} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-                                                        <p>No assignments created yet.</p>
-                                                        <button onClick={() => setShowAssignmentModal(true)} style={{ color: '#2563eb', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.5rem' }}>Create First Assignment</button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Quizzes View */}
-                                    {assessmentTab === 'quizzes' && (
-                                        <div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                                                {course?.quizzes?.length > 0 ? course.quizzes.map(quiz => (
-                                                    <motion.div 
-                                                        key={quiz._id} 
-                                                        initial={{ opacity: 0 }} 
-                                                        animate={{ opacity: 1 }} 
-                                                        className="card" 
-                                                        style={{ padding: '1.5rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid #e2e8f0', position: 'relative', cursor: 'pointer' }}
-                                                        onClick={() => setViewingAssessment({ ...quiz, type: 'quiz' })}
-                                                        whileHover={{ y: -2 }}
-                                                    >
-                                                         <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
-                                                            <button onClick={(e) => { e.stopPropagation(); handleEditQuiz(quiz); }} style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }} className="hover:text-blue-500"><Edit size={16} /></button>
-                                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteQuiz(quiz._id); }} style={{ color: 'var(--text-lighter)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }} className="hover:text-red-500"><Trash2 size={16} /></button>
-                                                         </div>
-                                                         <div style={{ width: '40px', height: '40px', background: '#f0fdf4', color: '#15803d', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                                                             <CheckCircle size={20} />
-                                                         </div>
-                                                         <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.5rem' }}>{quiz.title}</h4>
-                                                         <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: '0' }}>{quiz.questions?.length} Questions</p>
+                                                ))
+                                            ) : (
+                                                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem', background: '#f8fafc', borderRadius: '32px', border: '2px dashed #e2e8f0' }}>
+                                                    <p style={{ color: '#94a3b8', fontWeight: 600 }}>No assignments created yet.</p>
+                                                </div>
+                                            )
+                                        ) : (
+                                            course.quizzes?.length > 0 ? (
+                                                course.quizzes.map((quiz, idx) => (
+                                                    <motion.div key={quiz._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} style={{ background: 'white', padding: '1.75rem', borderRadius: '24px', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#166534' }}><HelpCircle size={24} /></div>
+                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                <button onClick={() => handleEditQuiz(quiz)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer' }}><Edit size={16} /></button>
+                                                                <button onClick={() => openConfirmModal('quiz', quiz._id)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #fee2e2', background: 'white', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>{quiz.title}</h3>
+                                                            <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>{quiz.questions?.length || 0} Multiple Choice Questions</p>
+                                                        </div>
+                                                        <div style={{ marginTop: 'auto', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#6366f1', fontSize: '0.85rem', fontWeight: 700 }}><Sparkles size={16} /> Professional Assessment</div>
+                                                            <button onClick={() => setViewingAssessment({...quiz, type: 'quiz'})} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer' }}>Preview Quiz</button>
+                                                        </div>
                                                     </motion.div>
-                                                )) : (
-                                                    <div style={{ gridColumn: '1/-1', padding: '4rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: '16px', border: '2px dashed #e2e8f0', color: 'var(--text-lighter)' }}>
-                                                        <CheckCircle size={32} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-                                                        <p>No quizzes created yet.</p>
-                                                        <button onClick={() => setShowQuizModal(true)} style={{ color: '#2563eb', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.5rem' }}>Create First Quiz</button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- GRADEBOOK TAB --- */}
-                        {activeTab === 'gradebook' && (
-                            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-                                <div style={{ marginBottom: '2rem' }}>
-                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Gradebook</h2>
-                                    <p style={{ color: 'var(--text-light)', marginTop: '0.25rem' }}>Track student progress and performance.</p>
-                                </div>
-                                <div className="card" style={{ background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                                    {/* (Existing Gradebook Table Code) */}
-                                    <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
-                                        <select value={gradebookFilter} onChange={e => setGradebookFilter(e.target.value)} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}>
-                                            <option value="all">All Students</option>
-                                            <option value="passed">Passing</option>
-                                            <option value="failed">At Risk</option>
-                                        </select>
+                                                ))
+                                            ) : (
+                                                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem', background: '#f8fafc', borderRadius: '32px', border: '2px dashed #e2e8f0' }}>
+                                                    <p style={{ color: '#94a3b8', fontWeight: 600 }}>No quizzes created yet.</p>
+                                                </div>
+                                            )
+                                        )}
                                     </div>
-                                    {/* ... Reuse existing table logic here ... */}
-                                    {gradebookLoading ? <div style={{ padding: '3rem', textAlign: 'center' }}>Loading...</div> : (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                            <thead style={{ background: 'var(--bg-main)', borderBottom: '1px solid #e2e8f0' }}>
+                                </div>
+                            )}
+
+                            {/* Gradebook Tab */}
+                            {activeTab === 'gradebook' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Academic Performance</h2>
+                                            <p style={{ color: '#64748b', fontWeight: 500 }}>Monitor student progress and manage academic records</p>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '1rem', background: '#f1f5f9', padding: '0.4rem', borderRadius: '12px' }}>
+                                            <button onClick={() => setGradebookFilter('all')} style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', border: 'none', background: gradebookFilter === 'all' ? 'white' : 'transparent', color: gradebookFilter === 'all' ? '#0f172a' : '#64748b', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: gradebookFilter === 'all' ? '0 4px 6px -1px rgba(0,0,0,0.05)' : 'none' }}>All Students</button>
+                                            <button onClick={() => setGradebookFilter('active')} style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', border: 'none', background: gradebookFilter === 'active' ? 'white' : 'transparent', color: gradebookFilter === 'active' ? '#0f172a' : '#64748b', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: gradebookFilter === 'active' ? '0 4px 6px -1px rgba(0,0,0,0.05)' : 'none' }}>Active</button>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ overflowX: 'auto', background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                            <thead>
                                                 <tr>
-                                                    <th style={{ textAlign: 'left', padding: '1rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 }}>Student</th>
-                                                    <th style={{ textAlign: 'left', padding: '1rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 }}>Overall Progress</th>
-                                                    <th style={{ textAlign: 'left', padding: '1rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 }}>Assignments</th>
-                                                    <th style={{ textAlign: 'left', padding: '1rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 }}>Quizzes</th>
+                                                    <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Learner</th>
+                                                    <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Content Progress</th>
+                                                    <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Assignments</th>
+                                                    <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Quizzes</th>
+                                                    <th style={{ padding: '1.25rem 1.5rem', textAlign: 'left', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Overall Grade</th>
+                                                    <th style={{ padding: '1.25rem 1.5rem', textAlign: 'center', background: '#f8fafc', color: '#64748b', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9' }}>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {gradebookData.map((student, i) => (
-                                                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                        <td style={{ padding: '1rem 1.5rem', fontWeight: 500, color: 'var(--text-main)' }}>
-                                                            <div>{student.name}</div>
-                                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>{student.email}</div>
-                                                        </td>
-                                                        <td style={{ padding: '1rem 1.5rem' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <div style={{ flex: 1, height: '6px', background: 'var(--border-color)', borderRadius: '3px', maxWidth: '100px' }}>
-                                                                    <div style={{ width: `${student.progress}%`, height: '100%', background: student.progress >= 80 ? '#22c55e' : '#3b82f6', borderRadius: '3px' }}/>
+                                                {gradebookData.length > 0 ? (
+                                                    gradebookData.map((data, idx) => (
+                                                        <tr key={data.studentId || idx} style={{ transition: 'background 0.2s' }}>
+                                                            <td style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#0f172a', border: '1px solid #e2e8f0' }}>{data.name?.charAt(0) || '?'}</div>
+                                                                    <div>
+                                                                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{data.name}</div>
+                                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{data.email}</div>
+                                                                    </div>
                                                                 </div>
-                                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{student.progress}%</span>
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '1rem 1.5rem' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                <span style={{ fontWeight: 600 }}>{student.assignments?.length || 0}</span>
-                                                                <button 
-                                                                    onClick={() => setSelectedStudentForGrading(student)}
-                                                                    style={{ background: 'var(--primary-light)', color: '#4f46e5', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}
-                                                                >
-                                                                    Review
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '1rem 1.5rem' }}>
-                                                            {student.quizzes?.length > 0 ? (
-                                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                                    {student.quizzes.map((q, j) => (
-                                                                        <div key={j} style={{ width: '20px', height: '20px', borderRadius: '4px', background: q.score >= 80 ? '#dcfce7' : '#fee2e2', color: q.score >= 80 ? '#166534' : '#991b1b', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                                                                            {q.score}
-                                                                        </div>
-                                                                    ))}
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                                <div style={{ width: '120px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 800, color: '#64748b', marginBottom: '0.4rem' }}>
+                                                                        <span>{data.progress || 0}%</span>
+                                                                    </div>
+                                                                    <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
+                                                                        <motion.div initial={{ width: 0 }} animate={{ width: `${data.progress || 0}%` }} style={{ height: '100%', background: '#10b981', borderRadius: '10px' }} />
+                                                                    </div>
                                                                 </div>
-                                                            ) : '-'}
-                                                        </td>
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+                                                                {data.assignments?.filter(a => a.submissionUrl).length || 0} / {course.assignments?.length || 0}
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem', fontWeight: 600, color: '#0f172a' }}>
+                                                                {data.quizzes?.length || 0} / {course.quizzes?.length || 0}
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                                                                <span style={{ padding: '4px 12px', background: '#f5f3ff', color: '#7c3aed', borderRadius: '8px', fontWeight: 800, fontSize: '0.85rem' }}>
+                                                                    {(() => {
+                                                                        const aScores = data.assignments?.filter(a => a.score !== undefined).map(a => a.score) || [];
+                                                                        const qScores = data.quizzes?.filter(q => q.score !== undefined).map(q => q.score) || [];
+                                                                        const allScores = [...aScores, ...qScores];
+                                                                        if (allScores.length === 0) return 'N/A';
+                                                                        const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+                                                                        return `${Math.round(avg)}%`;
+                                                                    })()}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9', textAlign: 'center' }}>
+                                                                <button onClick={() => setSelectedStudentForGrading(data)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '10px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s' }}>Grade</button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="6" style={{ padding: '5rem', textAlign: 'center', color: '#94a3b8', fontWeight: 600 }}>No academic records found for this course.</td>
                                                     </tr>
-                                                ))}
+                                                )}
                                             </tbody>
                                         </table>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                    </div>
-                </div>
-
-                {/* --- MODALS --- */}
-                
-                {/* Upload Content Modal */}
-                <AnimatePresence>
-                    {showUploadModal && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: '500px', maxWidth: '90%' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                                    <h3 style={{ margin: 0 }}>Upload New Content</h3>
-                                    <button type="button" onClick={() => setShowUploadModal(false)} style={{ background: 'none', border: 'none' }}><X size={24} /></button>
-                                </div>
-                                <form onSubmit={handleUploadContent}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        <input required value={contentTitle} onChange={e => setContentTitle(e.target.value)} placeholder="Lesson Title" style={inputStyle} disabled={uploading} />
-                                        <textarea value={contentDescription} onChange={e => setContentDescription(e.target.value)} placeholder="Description..." style={{...inputStyle, minHeight: '80px'}} disabled={uploading} />
-                                        <select value={contentType} onChange={e => setContentType(e.target.value)} style={inputStyle} disabled={uploading}>
-                                            <option value="pdf">PDF Document</option>
-                                            <option value="video">Video Lesson</option>
-                                        </select>
-                                        <input type="file" required onChange={e => setUploadFile(e.target.files[0])} style={inputStyle} disabled={uploading} />
-                                        <button type="submit" disabled={uploading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600 }}>
-                                            {uploading ? <><Loader2 size={18} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> Uploading...</> : 'Upload'}
-                                        </button>
                                     </div>
-                                </form>
-                            </div>
+                                </div>
+                            )}
+
+                            {/* Learners Tab */}
+                            {activeTab === 'students' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Active Learners</h2>
+                                            <p style={{ color: '#64748b', fontWeight: 500 }}>Manage students currently enrolled in this course</p>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                                        {gradebookLoading ? (
+                                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem' }}>
+                                                <Loader2 size={32} className="spin" color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
+                                                <p style={{ marginTop: '1rem', color: '#64748b', fontWeight: 600 }}>Fetching learners list...</p>
+                                            </div>
+                                        ) : gradebookData && gradebookData.length > 0 ? (
+                                            gradebookData.map((student, idx) => (
+                                                <motion.div
+                                                    key={student.studentId || idx}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: idx * 0.05 }}
+                                                    style={{ background: 'white', padding: '1.5rem', borderRadius: '24px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '1.25rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}
+                                                >
+                                                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#0f172a', border: '1px solid #e2e8f0', fontSize: '1.2rem' }}>
+                                                        {student.name?.charAt(0) || '?'}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1.05rem' }}>{student.name}</div>
+                                                        <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>{student.email}</div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '8px', background: '#ecfdf5', color: '#059669', fontWeight: 800, textTransform: 'uppercase' }}>Enrolled</span>
+                                                            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '8px', background: '#f5f3ff', color: '#7c3aed', fontWeight: 800 }}>{student.progress}% Complete</span>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            ))
+                                        ) : (
+                                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem', background: '#f8fafc', borderRadius: '32px', border: '2px dashed #e2e8f0' }}>
+                                                <p style={{ color: '#94a3b8', fontWeight: 600 }}>No students enrolled yet.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </motion.div>
-                    )}
-                </AnimatePresence>
+                    </AnimatePresence>
+                </div>
+            </main>
+
+            {/* Modals Section */}
+            <AnimatePresence>
+                {/* Upload Modal */}
+                {showUploadModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} style={{ background: 'white', borderRadius: '32px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                            <div style={{ padding: '2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fcfdfe' }}>
+                                <div>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>Add Course Module</h2>
+                                    <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>Upload videos or documents to your curriculum</p>
+                                </div>
+                                <button onClick={() => setShowUploadModal(false)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
+                            </div>
+                            <form onSubmit={handleUploadContent} style={{ padding: '2.5rem' }}>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Module Title</label>
+                                    <input required value={contentTitle} onChange={e => setContentTitle(e.target.value)} placeholder="e.g., Introduction to Neural Networks" style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 500, outline: 'none' }} />
+                                </div>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Content Type</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <button type="button" onClick={() => setContentType('video')} style={{ padding: '1rem', borderRadius: '14px', border: contentType === 'video' ? '2px solid #6366f1' : '1px solid #e2e8f0', background: contentType === 'video' ? '#f5f3ff' : 'white', color: contentType === 'video' ? '#6366f1' : '#64748b', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}><Video size={20} /> Video</button>
+                                        <button type="button" onClick={() => setContentType('pdf')} style={{ padding: '1rem', borderRadius: '14px', border: contentType === 'pdf' ? '2px solid #6366f1' : '1px solid #e2e8f0', background: contentType === 'pdf' ? '#f5f3ff' : 'white', color: contentType === 'pdf' ? '#6366f1' : '#64748b', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}><FileText size={20} /> PDF Doc</button>
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</label>
+                                    <textarea required value={contentDescription} onChange={e => setContentDescription(e.target.value)} placeholder="Provide context for this module..." style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 500, outline: 'none', minHeight: '120px', resize: 'vertical' }} />
+                                </div>
+                                <div style={{ marginBottom: '2.5rem' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resource File</label>
+                                    <div style={{ position: 'relative', height: '100px', border: '2px dashed #cbd5e1', borderRadius: '14px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                                        <input type="file" onChange={e => setUploadFile(e.target.files[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 1 }} />
+                                        <div style={{ textAlign: 'center', color: '#64748b' }}>
+                                            <Upload size={24} style={{ marginBottom: '0.5rem' }} />
+                                            <div style={{ fontWeight: 700 }}>{uploadFile ? uploadFile.name : 'Click or Drag to Upload'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" disabled={uploading} style={{ width: '100%', padding: '1.25rem', borderRadius: '16px', background: '#0f172a', color: 'white', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                                    {uploading ? <><Loader2 size={20} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : 'Upload Module'}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
 
                 {/* AI Syllabus Generator Modal */}
-                <AnimatePresence>
-                    {showSyllabusModal && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: -20 }} style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: syllabusStep === 'review' ? '800px' : '500px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10, paddingBottom: '1rem', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                                            <Sparkles size={20} />
-                                        </div>
-                                        <div>
-                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>{syllabusStep === 'review' ? 'Review & Edit Structure' : 'AI Structure Builder'}</h3>
-                                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{syllabusStep === 'review' ? 'Fine-tune your generated lesson plan before adding it to the course.' : 'Generate a complete curriculum instantly.'}</p>
-                                        </div>
+                {showSyllabusModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} style={{ background: 'white', borderRadius: '32px', width: '100%', maxWidth: syllabusStep === 'review' ? '800px' : '500px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <div style={{ padding: '2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}><Sparkles size={24} /></div>
+                                    <div>
+                                        <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>{syllabusStep === 'review' ? 'Review AI Syllabus' : 'AI Syllabus Builder'}</h2>
+                                        <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>{syllabusStep === 'review' ? 'Fine-tune your generated content structure' : 'Generate a complete course structure in seconds'}</p>
                                     </div>
-                                    <button type="button" onClick={() => { setShowSyllabusModal(false); setSyllabusStep('input'); }} style={{ background: 'var(--bg-secondary)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
                                 </div>
-                                
+                                <button onClick={() => { setShowSyllabusModal(false); setSyllabusStep('input'); }} style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={20} /></button>
+                            </div>
+                            
+                            <div style={{ padding: '2.5rem' }}>
                                 {syllabusStep === 'input' ? (
                                     <form onSubmit={handleGenerateSyllabus}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                            <div style={{ padding: '1rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                                                <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', margin: '0 0 0.5rem', fontWeight: 500 }}>Focus Topic or Concept:</p>
-                                                <input 
-                                                    required 
-                                                    value={syllabusTopic} 
-                                                    onChange={e => setSyllabusTopic(e.target.value)} 
-                                                    placeholder="e.g. Advanced State Management in React" 
-                                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '0.95rem', color: 'var(--text-main)', outline: 'none' }} 
-                                                    disabled={isGeneratingSyllabus} 
-                                                />
-                                            </div>
-                                           
-                                            <button type="submit" disabled={isGeneratingSyllabus} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)', opacity: isGeneratingSyllabus ? 0.7 : 1 }}>
-                                                {isGeneratingSyllabus ? <><Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> Designing Syllabus...</> : <><Sparkles size={20}/> Generate Full Structure</>}
-                                            </button>
+                                        <div style={{ marginBottom: '2rem' }}>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>What should this course cover?</label>
+                                            <input required value={syllabusTopic} onChange={e => setSyllabusTopic(e.target.value)} placeholder="e.g. Master Advanced State Management in React" style={{ width: '100%', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, outline: 'none' }} disabled={isGeneratingSyllabus} />
                                         </div>
+                                        <button type="submit" disabled={isGeneratingSyllabus} style={{ width: '100%', padding: '1.25rem', borderRadius: '16px', background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: 'white', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 20px -5px rgba(139, 92, 246, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                                            {isGeneratingSyllabus ? <><Loader2 size={22} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> Thinking...</> : <><Sparkles size={22} /> Generate Structure</>}
+                                        </button>
                                     </form>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         {generatedSyllabus.map((module, index) => (
-                                            <div 
-                                                key={module._id} 
-                                                style={{ 
-                                                    background: 'var(--bg-main)', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '12px', padding: '1.25rem', 
-                                                    display: 'flex', gap: '1.25rem', alignItems: 'flex-start', position: 'relative'
-                                                }}
-                                            >
-                                                <div style={{ background: 'var(--bg-card)', border: '1px solid rgba(0,0,0,0.05)', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'var(--text-lighter)', fontSize: '0.85rem' }}>
-                                                    {index + 1}
-                                                </div>
+                                            <motion.div key={index} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '20px', border: '1px solid #e2e8f0', display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
+                                                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.85rem', flexShrink: 0 }}>{index + 1}</div>
                                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                                        <input 
-                                                            value={module.title}
-                                                            onChange={e => handleUpdateSyllabusItem(index, 'title', e.target.value)}
-                                                            style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', outline: 'none' }}
-                                                        />
-                                                        <select 
-                                                            value={module.type}
-                                                            onChange={e => handleUpdateSyllabusItem(index, 'type', e.target.value)}
-                                                            style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '0.85rem', color: 'var(--text-main)', outline: 'none' }}
-                                                        >
-                                                            <option value="video">Video Lesson</option>
-                                                            <option value="pdf">Study Material (PDF)</option>
+                                                        <input value={module.title} onChange={e => handleUpdateSyllabusItem(index, 'title', e.target.value)} style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', fontSize: '1rem', fontWeight: 700 }} />
+                                                        <select value={module.type} onChange={e => handleUpdateSyllabusItem(index, 'type', e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.85rem', fontWeight: 800 }}>
+                                                            <option value="video">Video</option>
+                                                            <option value="pdf">PDF Doc</option>
                                                         </select>
                                                     </div>
-                                                    {module.type === 'video' && (
-                                                        <textarea 
-                                                            value={module.description || ''}
-                                                            placeholder="Detailed description of the video..."
-                                                            onChange={e => handleUpdateSyllabusItem(index, 'description', e.target.value)}
-                                                            rows={3}
-                                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'var(--bg-card)', fontSize: '0.95rem', color: 'var(--text-secondary)', outline: 'none', resize: 'vertical', lineHeight: '1.5' }}
-                                                        />
-                                                    )}
+                                                    <textarea value={module.description} onChange={e => handleUpdateSyllabusItem(index, 'description', e.target.value)} rows={2} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white', fontSize: '0.9rem', fontWeight: 500, resize: 'none' }} />
                                                 </div>
-                                                <button 
-                                                    onClick={() => handleRemoveSyllabusItem(index)}
-                                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6, transition: 'opacity 0.2s', padding: '0.25rem' }}
-                                                    onMouseOver={e => e.currentTarget.style.opacity = 1}
-                                                    onMouseOut={e => e.currentTarget.style.opacity = 0.6}
-                                                    title="Remove Module"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
+                                                <button onClick={() => handleRemoveSyllabusItem(index)} style={{ padding: '0.5rem', borderRadius: '8px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                            </motion.div>
                                         ))}
-                                        
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                                            <button 
-                                                onClick={() => setSyllabusStep('input')} 
-                                                style={{ background: 'transparent', border: 'none', color: 'var(--text-light)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
-                                            >
-                                                Start Over
-                                            </button>
-                                            <button 
-                                                onClick={handleSaveSyllabus}
-                                                disabled={isSavingSyllabus}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', background: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)' }}
-                                            >
-                                                {isSavingSyllabus ? <><Loader2 size={18} className="spin" /> Saving...</> : <><CheckCircle size={18}/> Confirm & Add to Content</>}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
+                                            <button onClick={() => setSyllabusStep('input')} style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: 800, cursor: 'pointer' }}>Start Over</button>
+                                            <button onClick={handleSaveSyllabus} disabled={isSavingSyllabus} style={{ padding: '1rem 2rem', borderRadius: '14px', background: '#22c55e', color: 'white', border: 'none', fontWeight: 800, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(34, 197, 94, 0.3)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                {isSavingSyllabus ? <Loader2 className="spin" size={20} /> : <CheckCircle size={20} />} Add to Curriculum
                                             </button>
                                         </div>
                                     </div>
                                 )}
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Assignment Modal */}
-                <AnimatePresence>
-                    {showAssignmentModal && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: '500px', maxWidth: '90%' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                                    <h3 style={{ margin: 0 }}>{editingAssignment ? 'Edit Assignment' : 'Create Assignment'}</h3>
-                                    <button type="button" onClick={() => { setShowAssignmentModal(false); setEditingAssignment(null); setAssignmentForm({ title: '', description: '', dueDate: '' }); }} style={{ background: 'none', border: 'none' }}><X size={24} /></button>
-                                </div>
-                                <form onSubmit={handleCreateAssignment}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        <input required value={assignmentForm.title} onChange={e => setAssignmentForm({...assignmentForm, title: e.target.value})} placeholder="Title" style={inputStyle} disabled={uploading} />
-                                        <textarea required value={assignmentForm.description} onChange={e => setAssignmentForm({...assignmentForm, description: e.target.value})} placeholder="Instructions..." style={{...inputStyle, minHeight: '100px'}} disabled={uploading} />
-                                        <input type="date" value={assignmentForm.dueDate} onChange={e => setAssignmentForm({...assignmentForm, dueDate: e.target.value})} style={inputStyle} disabled={uploading} />
-                                        <button type="submit" disabled={uploading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600 }}>
-                                            {uploading ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : (editingAssignment ? 'Update Assignment' : 'Create Assignment')}
-                                        </button>
-                                    </div>
-                                </form>
                             </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
+                    </div>
+                )}
+
+                {/* Assignment Modal */}
+                {showAssignmentModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ background: 'white', borderRadius: '32px', width: '100%', maxWidth: '550px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <div style={{ padding: '2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a' }}>{editingAssignment ? 'Edit Assignment' : 'New Assignment'}</h2>
+                                <button onClick={() => { setShowAssignmentModal(false); setEditingAssignment(null); setAssignmentForm({title: '', description: '', dueDate: ''}); }} style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f1f5f9', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+                            </div>
+                            <form onSubmit={handleCreateAssignment} style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Title</label>
+                                    <input required value={assignmentForm.title} onChange={e => setAssignmentForm({...assignmentForm, title: e.target.value})} placeholder="e.g. Final Project Submission" style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600 }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Instructions</label>
+                                    <textarea required value={assignmentForm.description} onChange={e => setAssignmentForm({...assignmentForm, description: e.target.value})} placeholder="What should students do?" rows={4} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 500 }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Due Date</label>
+                                    <input type="date" required value={assignmentForm.dueDate} onChange={e => setAssignmentForm({...assignmentForm, dueDate: e.target.value})} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600 }} />
+                                </div>
+                                <button type="submit" disabled={uploading} style={{ width: '100%', padding: '1.25rem', borderRadius: '16px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)' }}>
+                                    {uploading ? <Loader2 className="spin" size={20} /> : (editingAssignment ? 'Update Assignment' : 'Publish Assignment')}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
 
                 {/* Quiz Modal */}
-                <AnimatePresence>
-                    {showQuizModal && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: '700px', maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-                                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.25rem', fontWeight: 700 }}>
-                                        {editingQuiz ? <Edit size={24} color="#6366f1" /> : <PlusCircle size={24} color="#6366f1" />}
-                                        {editingQuiz ? 'Edit Quiz' : 'Create New Quiz'}
-                                    </h3>
-                                    <button type="button" onClick={() => { setShowQuizModal(false); setEditingQuiz(null); setQuizForm({ title: '', questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }] }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={24} /></button>
-                                </div>
-
+                {showQuizModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ background: 'white', borderRadius: '32px', width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <div style={{ padding: '2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a' }}>{editingQuiz ? 'Edit Quiz' : 'Create New Quiz'}</h2>
+                                <button onClick={() => { setShowQuizModal(false); setEditingQuiz(null); setQuizForm({title: '', questions: [{question: '', options: ['', '', '', ''], correctAnswer: 0}]}); }} style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f1f5f9', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+                            </div>
+                            
+                            <div style={{ padding: '2.5rem' }}>
                                 {!editingQuiz && (
-                                    <div style={{ 
-                                        marginBottom: '2rem', 
-                                        padding: '1.5rem', 
-                                        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', 
-                                        borderRadius: '12px', 
-                                        color: 'white',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}>
-                                        <div style={{ position: 'relative', zIndex: 1 }}>
-                                            <h4 style={{ margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
-                                                <Sparkles size={20} /> AI Quiz Generator
-                                            </h4>
-                                            <p style={{ margin: '0 0 1.25rem', fontSize: '0.85rem', opacity: 0.9 }}>
-                                                Upload a PDF study material, and I'll generate 10 professional MCQs for you instantly.
-                                            </p>
-                                            
-                                            <div style={{ position: 'relative' }}>
-                                                <input 
-                                                    type="file" 
-                                                    accept=".pdf" 
-                                                    onChange={handleGenerateAIQuiz}
-                                                    style={{ 
-                                                        position: 'absolute', 
-                                                        inset: 0, 
-                                                        opacity: 0, 
-                                                        cursor: 'pointer',
-                                                        zIndex: 2
-                                                    }}
-                                                    disabled={isGeneratingAIQuiz}
-                                                />
-                                                <div style={{ 
-                                                    background: 'rgba(255,255,255,0.2)', 
-                                                    border: '1px dashed rgba(255,255,255,0.4)',
-                                                    borderRadius: '8px',
-                                                    padding: '0.75rem',
-                                                    textAlign: 'center',
-                                                    fontSize: '0.9rem',
-                                                    fontWeight: 600,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.75rem',
-                                                    transition: 'all 0.2s'
-                                                }}>
-                                                    {isGeneratingAIQuiz ? (
-                                                        <><Loader2 size={20} className="spin" /> Reading PDF & Thinking...</>
-                                                    ) : (
-                                                        <><FileUp size={20} /> Upload PDF to Auto-Generate</>
-                                                    )}
-                                                </div>
-                                            </div>
+                                    <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', borderRadius: '24px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <h4 style={{ margin: '0 0 0.25rem 0', fontWeight: 900, fontSize: '1.1rem' }}>AI Quiz Assistant</h4>
+                                            <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>Upload a PDF to generate 10 MCQs instantly</p>
                                         </div>
-                                        {/* Background Decoration */}
-                                        <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', opacity: 0.2 }}>
-                                            <Sparkles size={100} />
+                                        <div style={{ position: 'relative' }}>
+                                            <input type="file" accept=".pdf" onChange={handleGenerateAIQuiz} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} disabled={isGeneratingAIQuiz} />
+                                            <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.4)', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {isGeneratingAIQuiz ? <Loader2 className="spin" size={18} /> : <FileUp size={18} />} Generate with AI
+                                            </div>
                                         </div>
                                     </div>
                                 )}
-                                <form onSubmit={handleCreateQuiz}>
-                                    <div style={{ marginBottom: '1.5rem' }}>
-                                        <label style={labelStyle}>Quiz Title</label>
-                                        <input required value={quizForm.title} onChange={e => setQuizForm({...quizForm, title: e.target.value})} style={inputStyle} placeholder="e.g. Module 1 Quiz" disabled={uploading} />
+
+                                <form onSubmit={handleCreateQuiz} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Quiz Title</label>
+                                        <input required value={quizForm.title} onChange={e => setQuizForm({...quizForm, title: e.target.value})} placeholder="e.g. Module 1 Knowledge Check" style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1.1rem', fontWeight: 700 }} />
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                                        {quizForm.questions.map((q, qIndex) => (
-                                            <div key={qIndex} style={{ padding: '1.25rem', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid #e2e8f0', position: 'relative' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                                    <span style={{ fontWeight: 600, color: '#6366f1' }}>Question {qIndex + 1}</span>
-                                                    {quizForm.questions.length > 1 && <button type="button" onClick={() => handleRemoveQuestion(qIndex)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>}
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        {quizForm.questions.map((q, qIdx) => (
+                                            <motion.div key={qIdx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '2rem', background: '#f8fafc', borderRadius: '24px', border: '1px solid #e2e8f0', position: 'relative' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                                    <span style={{ fontWeight: 900, color: '#6366f1', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>Question {qIdx + 1}</span>
+                                                    {quizForm.questions.length > 1 && <button type="button" onClick={() => handleRemoveQuestion(qIdx)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>}
                                                 </div>
-                                                <input required value={q.question} onChange={e => handleQuestionChange(qIndex, 'question', e.target.value)} style={{ ...inputStyle, marginBottom: '1rem', background: 'var(--bg-card)' }} placeholder="Enter your question here..." disabled={uploading} />
+                                                <input required value={q.question} onChange={e => handleQuestionChange(qIdx, 'question', e.target.value)} placeholder="Type your question here..." style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: 'white', fontSize: '1rem', fontWeight: 600, marginBottom: '1.5rem' }} />
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                                    {q.options.map((opt, oIndex) => (
-                                                        <div key={oIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <input type="radio" name={`correct-${qIndex}`} checked={q.correctAnswer == oIndex} onChange={() => handleQuestionChange(qIndex, 'correctAnswer', oIndex)} style={{ accentColor: '#10b981', width: '16px', height: '16px' }} disabled={uploading} />
-                                                            <input required value={opt} onChange={e => handleOptionChange(qIndex, oIndex, e.target.value)} placeholder={`Option ${oIndex + 1}`} style={{ ...inputStyle, padding: '0.5rem', fontSize: '0.9rem', background: 'var(--bg-card)' }} disabled={uploading} />
+                                                    {q.options.map((opt, oIdx) => (
+                                                        <div key={oIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'white', padding: '0.5rem 1rem', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                                                            <input type="radio" name={`correct-${qIdx}`} checked={q.correctAnswer == oIdx} onChange={() => handleQuestionChange(qIdx, 'correctAnswer', oIdx)} style={{ width: '18px', height: '18px', accentColor: '#10b981' }} />
+                                                            <input required value={opt} onChange={e => handleOptionChange(qIdx, oIdx, e.target.value)} placeholder={`Option ${oIdx + 1}`} style={{ flex: 1, border: 'none', background: 'none', fontSize: '0.9rem', fontWeight: 600, outline: 'none' }} />
                                                         </div>
                                                     ))}
                                                 </div>
-                                            </div>
+                                            </motion.div>
                                         ))}
                                     </div>
+
                                     <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <button type="button" onClick={handleAddQuestion} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6366f1', background: 'var(--primary-light)', padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}><PlusCircle size={18} /> Add Question</button>
-                                        <button type="submit" disabled={uploading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#4f46e5', color: 'white', padding: '0.75rem 2rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                                            {uploading ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Processing...</> : (editingQuiz ? 'Update Quiz' : 'Publish Quiz')}
-                                        </button>
+                                        <button type="button" onClick={handleAddQuestion} style={{ flex: 1, padding: '1rem', borderRadius: '14px', border: '2px dashed #6366f1', color: '#6366f1', background: 'none', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}><PlusCircle size={20} /> Add Question</button>
+                                        <button type="submit" style={{ flex: 1, padding: '1rem', borderRadius: '14px', background: '#6366f1', color: 'white', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)' }}>{editingQuiz ? 'Update Quiz' : 'Publish Quiz'}</button>
                                     </div>
                                 </form>
                             </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
+                    </div>
+                )}
+
                 {/* Grade Student Modal */}
                 <GradeStudentModal 
                     isOpen={!!selectedStudentForGrading}
@@ -1217,175 +1084,128 @@ const InstructorCourseDetails = () => {
                     student={selectedStudentForGrading}
                     courseAssignments={course?.assignments}
                     courseId={id}
-                    onGradeUpdated={() => {
-                        fetchGradebook(); // Refresh data!
-                    }}
+                    onGradeUpdated={fetchGradebook}
                 />
 
-                {/* Edit Content Modal */}
-                <AnimatePresence>
-                    {isEditModalOpen && editingContent && (
-                        <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}
-                        >
-                            <motion.div 
-                                initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-                                className="card"
-                                style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '16px', width: '500px', maxWidth: '90%' }}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Edit Content</h3>
-                                    <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}><X size={24} /></button>
+                {/* View Content Details Modal */}
+                {viewingContentDetails && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ background: 'white', borderRadius: '32px', width: '100%', maxWidth: '600px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <div style={{ padding: '2.5rem', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                    <div style={{ display: 'inline-flex', padding: '4px 12px', background: viewingContentDetails.type === 'video' ? '#fef2f2' : '#eff6ff', color: viewingContentDetails.type === 'video' ? '#ef4444' : '#3b82f6', borderRadius: '100px', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1rem', border: '1px solid currentColor' }}>{viewingContentDetails.type}</div>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>{viewingContentDetails.title}</h3>
                                 </div>
-                                
-                                <form onSubmit={handleUpdateContent} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <div>
-                                        <label style={labelStyle}>Title</label>
-                                        <input required value={editingContent.title} onChange={e => setEditingContent({...editingContent, title: e.target.value})} style={inputStyle} />
-                                    </div>
-                                    <div>
-                                        <label style={labelStyle}>Description</label>
-                                        <textarea value={editingContent.description} onChange={e => setEditingContent({...editingContent, description: e.target.value})} style={{...inputStyle, minHeight: '80px', resize: 'vertical'}} />
-                                    </div>
-                                    <div>
-                                        <label style={labelStyle}>File Type</label>
-                                        <select value={editingContent.type} onChange={e => setEditingContent({...editingContent, type: e.target.value})} style={{...inputStyle, background: 'var(--bg-card)'}}>
-                                            <option value="pdf">PDF Document</option>
-                                            <option value="video">Video Lesson</option>
-                                            <option value="image">Image resource</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={labelStyle}>Replace File (Optional)</label>
-                                        <input type="file" onChange={e => setUploadFile(e.target.files[0])} style={{...inputStyle, padding: '0.5rem'}} />
-                                        {editingContent.fileName && <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginTop: '0.25rem' }}>Current file: {editingContent.fileName}</p>}
-                                    </div>
-                                    
-                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                        <button type="button" disabled={uploading} onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: '0.85rem', background: 'var(--bg-secondary)', color: 'var(--text-light)', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                                        <button type="submit" disabled={uploading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flex: 1, padding: '0.85rem', background: '#4f46e5', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
-                                            {uploading ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Updating...</> : 'Save Changes'}
-                                        </button>
-                                    </div>
-                                </form>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                {/* View Content Detail Modal */}
-                <AnimatePresence>
-                    {viewingContentDetails && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ background: 'var(--bg-card)', padding: '0', borderRadius: '16px', width: '600px', maxWidth: '90%', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                                <div style={{ padding: '2rem 2rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'start', background: 'linear-gradient(to right, #f8fafc, #ffffff)' }}>
-                                    <div>
-                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.85rem', background: viewingContentDetails.type === 'video' ? '#eff6ff' : '#f0fdf4', color: viewingContentDetails.type === 'video' ? '#2563eb' : '#166534', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-                                            {viewingContentDetails.type === 'video' ? <Video size={14}/> : <FileText size={14}/>}
-                                            {viewingContentDetails.type === 'video' ? 'Video Lesson' : 'Study Material'}
-                                        </div>
-                                        <h3 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-main)', fontWeight: 800, lineHeight: 1.3 }}>{viewingContentDetails.title}</h3>
-                                    </div>
-                                    <button onClick={() => setViewingContentDetails(null)} style={{ background: 'var(--bg-main)', border: '1px solid #e2e8f0', cursor: 'pointer', color: 'var(--text-light)', borderRadius: '50%', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={e => e.currentTarget.style.background = 'var(--bg-main)'}><X size={20} /></button>
-                                </div>
-                                
-                                <div style={{ padding: '2rem', overflowY: 'auto' }}>
-                                    <div style={{ marginBottom: '1.5rem' }}>
-                                        <h4 style={{ fontSize: '0.85rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <FileText size={16} /> Description
-                                        </h4>
-                                        <div style={{ background: 'var(--bg-main)', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                            <p style={{ margin: 0, lineHeight: '1.7', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', fontSize: '0.95rem' }}>
-                                                {viewingContentDetails.description || <span style={{ color: 'var(--text-lighter)', fontStyle: 'italic' }}>No description provided.</span>}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div style={{ padding: '1.5rem 2rem', borderTop: '1px solid #e2e8f0', background: 'var(--bg-main)', display: 'flex', justifyContent: 'flex-end' }}>
-                                    <button onClick={() => setViewingContentDetails(null)} style={{ padding: '0.75rem 2rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)' }} onMouseOver={e => e.currentTarget.style.background = '#2563eb'} onMouseOut={e => e.currentTarget.style.background = '#3b82f6'}>Done</button>
+                                <button onClick={() => setViewingContentDetails(null)} style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer' }}><X size={18} /></button>
+                            </div>
+                            <div style={{ padding: '2.5rem' }}>
+                                <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Description</h4>
+                                <p style={{ fontSize: '1.05rem', color: '#475569', lineHeight: 1.7, fontWeight: 500 }}>{viewingContentDetails.description || 'No description provided.'}</p>
+                                <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
+                                    <button onClick={() => setViewingContentDetails(null)} style={{ flex: 1, padding: '1rem', borderRadius: '14px', background: '#f1f5f9', color: '#475569', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Close Preview</button>
+                                    <button style={{ flex: 1, padding: '1rem', borderRadius: '14px', background: '#0f172a', color: 'white', border: 'none', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}><Download size={18} /> Download Resource</button>
                                 </div>
                             </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
+                    </div>
+                )}
+
                 {/* View Assessment Detail Modal */}
-                <AnimatePresence>
-                    {viewingAssessment && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <div style={{ background: 'var(--bg-card)', padding: '0', borderRadius: '16px', width: '600px', maxWidth: '90%', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                    <div>
-                                        <div style={{ display: 'inline-block', padding: '0.25rem 0.75rem', background: viewingAssessment.type === 'assignment' ? '#e0f2fe' : '#dcfce7', color: viewingAssessment.type === 'assignment' ? '#0369a1' : '#166534', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                                            {viewingAssessment.type === 'assignment' ? 'Assignment' : 'Quiz'}
-                                        </div>
-                                        <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>{viewingAssessment.title}</h3>
-                                    </div>
-                                    <button onClick={() => setViewingAssessment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}><X size={24} /></button>
+                {viewingAssessment && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ background: 'white', borderRadius: '32px', width: '100%', maxWidth: '650px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <div style={{ padding: '2.5rem', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                    <div style={{ display: 'inline-flex', padding: '4px 12px', background: viewingAssessment.type === 'assignment' ? '#e0f2fe' : '#dcfce7', color: viewingAssessment.type === 'assignment' ? '#0369a1' : '#166534', borderRadius: '100px', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1rem', border: '1px solid currentColor' }}>{viewingAssessment.type}</div>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>{viewingAssessment.title}</h3>
                                 </div>
-                                
-                                <div style={{ padding: '1.5rem', overflowY: 'auto' }}>
-                                    {viewingAssessment.type === 'assignment' ? (
-                                        <>
-                                            <div style={{ marginBottom: '1.5rem' }}>
-                                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Instructions</h4>
-                                                <p style={{ lineHeight: '1.6', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{viewingAssessment.description}</p>
+                                <button onClick={() => setViewingAssessment(null)} style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer' }}><X size={18} /></button>
+                            </div>
+                            <div style={{ padding: '2.5rem' }}>
+                                {viewingAssessment.type === 'assignment' ? (
+                                    <>
+                                        <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Instructions</h4>
+                                        <p style={{ fontSize: '1.05rem', color: '#475569', lineHeight: 1.7, fontWeight: 500, whiteSpace: 'pre-wrap' }}>{viewingAssessment.description}</p>
+                                        <div style={{ marginTop: '2rem', padding: '1.25rem', background: '#fffbeb', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid #fef3c7' }}>
+                                            <Clock size={20} color="#b45309" />
+                                            <div>
+                                                <div style={{ fontWeight: 800, color: '#92400e', fontSize: '0.9rem' }}>Deadline</div>
+                                                <div style={{ fontWeight: 600, color: '#b45309', fontSize: '0.85rem' }}>{new Date(viewingAssessment.dueDate).toLocaleString()}</div>
                                             </div>
-                                            {viewingAssessment.dueDate && (
-                                                <div style={{ padding: '1rem', background: '#fffbeb', borderRadius: '8px', display: 'flex', gap: '0.5rem', alignItems: 'center', color: '#b45309' }}>
-                                                    <Clock size={16} />
-                                                    <span style={{ fontWeight: 600 }}>Due Date: {new Date(viewingAssessment.dueDate).toLocaleDateString()}</span>
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div style={{ marginBottom: '1.5rem' }}>
-                                                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Questions ({viewingAssessment.questions?.length})</h4>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                    {viewingAssessment.questions?.map((q, i) => (
-                                                        <div key={i} style={{ padding: '1rem', background: 'var(--bg-main)', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                            <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.75rem' }}>{i+1}. {q.question}</p>
-                                                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.5rem' }}>
-                                                                {q.options?.map((opt, j) => (
-                                                                    <li key={j} style={{ padding: '0.5rem 0.75rem', background: q.correctAnswer === j ? '#dcfce7' : 'white', border: q.correctAnswer === j ? '1px solid #86efac' : '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.9rem', color: q.correctAnswer === j ? '#166534' : 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                        {q.correctAnswer === j && <CheckCircle size={14} />} {opt}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Questions ({viewingAssessment.questions?.length})</h4>
+                                        {viewingAssessment.questions?.map((q, idx) => (
+                                            <div key={idx} style={{ padding: '1.5rem', background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                                                <p style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem', marginBottom: '1rem' }}>{idx + 1}. {q.question}</p>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                                    {q.options?.map((opt, oIdx) => (
+                                                        <div key={oIdx} style={{ padding: '0.75rem 1rem', borderRadius: '12px', border: q.correctAnswer === oIdx ? '2px solid #10b981' : '1px solid #e2e8f0', background: q.correctAnswer === oIdx ? '#ecfdf5' : 'white', fontSize: '0.85rem', fontWeight: 600, color: q.correctAnswer === oIdx ? '#065f46' : '#64748b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            {q.correctAnswer === oIdx && <CheckCircle size={14} />} {opt}
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
-                                        </>
-                                    )}
-                                </div>
-                                
-                                <div style={{ padding: '1.5rem', borderTop: '1px solid #e2e8f0', background: 'var(--bg-main)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                    <button onClick={() => setViewingAssessment(null)} style={{ padding: '0.75rem 1.5rem', background: 'var(--bg-card)', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Close</button>
-                                </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
-                <ConfirmModal
-                    isOpen={confirmModalState.isOpen}
-                    onClose={closeConfirmModal}
-                    onConfirm={confirmDeletion}
-                    title={`Delete ${confirmModalState.type === 'content' ? 'Content' : confirmModalState.type === 'assignment' ? 'Assignment' : 'Quiz'}?`}
-                    message={getConfirmMessage()}
-                    confirmText="Delete"
-                    cancelText="Cancel"
-                    isDestructive={true}
-                    icon={Trash2}
-                />
-            </main>
+                    </div>
+                )}
+
+                {/* Edit Content Modal */}
+                {isEditModalOpen && editingContent && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem' }}>
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ background: 'white', borderRadius: '32px', width: '100%', maxWidth: '550px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                            <div style={{ padding: '2.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a' }}>Edit Content</h2>
+                                <button onClick={() => { setIsEditModalOpen(false); setEditingContent(null); }} style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f1f5f9', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+                            </div>
+                            <form onSubmit={handleUpdateContent} style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Module Title</label>
+                                    <input required value={editingContent.title} onChange={e => setEditingContent({...editingContent, title: e.target.value})} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600 }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Type</label>
+                                    <select value={editingContent.type} onChange={e => setEditingContent({...editingContent, type: e.target.value})} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 600 }}>
+                                        <option value="video">Video Lesson</option>
+                                        <option value="pdf">PDF Document</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Description</label>
+                                    <textarea required value={editingContent.description} onChange={e => setEditingContent({...editingContent, description: e.target.value})} rows={4} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '1rem', fontWeight: 500 }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#475569', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Replace Resource (Optional)</label>
+                                    <input type="file" onChange={e => setUploadFile(e.target.files[0])} style={{ width: '100%', padding: '1rem', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.9rem' }} />
+                                </div>
+                                <button type="submit" disabled={uploading} style={{ width: '100%', padding: '1.25rem', borderRadius: '16px', background: '#0f172a', color: 'white', border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.3)' }}>
+                                    {uploading ? <Loader2 className="spin" size={20} /> : 'Save Changes'}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            <ConfirmModal 
+                isOpen={confirmModalState.isOpen} 
+                onClose={closeConfirmModal} 
+                onConfirm={confirmDeletion} 
+                title="Confirm Action" 
+                message={
+                    confirmModalState.type === 'bulk-content' 
+                    ? `Are you sure you want to delete ${selectedContents.length} items? This cannot be undone.` 
+                    : "Are you sure you want to proceed? This action may be irreversible."
+                } 
+            />
         </div>
     );
 };
-
-// Styles
-const labelStyle = { fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem', display: 'block' };
-const inputStyle = { padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', outline: 'none', fontSize: '0.95rem' };
 
 export default InstructorCourseDetails;

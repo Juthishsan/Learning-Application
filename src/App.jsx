@@ -29,6 +29,7 @@ import AdminEarnings from './pages/Admin/AdminEarnings';
 import InstructorProfile from './pages/Instructor/InstructorProfile';
 import InstructorSettings from './pages/Instructor/InstructorSettings';
 import InstructorCourseDetails from './pages/Instructor/InstructorCourseDetails';
+import InstructorEarnings from './pages/Instructor/InstructorEarnings';
 import Chatbot from './components/Chatbot/Chatbot';
 
 
@@ -106,6 +107,7 @@ function App() {
             <Route path="/instructor/courses" element={<InstructorCourses />} />
             <Route path="/instructor/courses/:id" element={<InstructorCourseDetails />} />
             <Route path="/instructor/students" element={<InstructorStudents />} />
+            <Route path="/instructor/earnings" element={<InstructorEarnings />} />
             <Route path="/instructor/profile" element={<InstructorProfile />} />
             <Route path="/instructor/settings" element={<InstructorSettings />} />
           </Routes>

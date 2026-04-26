@@ -11,7 +11,7 @@ const CourseCard = ({ course }) => {
     }
 
     return (
-        <Link to={`/course/${course._id}`} className="card" style={{ padding: 0, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', textDecoration: 'none', color: 'inherit' }}>
+        <Link to={`/course/${course._id}`} className="card" style={{ padding: 0, overflow: 'hidden', height: '100%', width: '100%', display: 'flex', flexDirection: 'column', textDecoration: 'none', color: 'inherit' }}>
             <div style={{ height: '160px', background: getCategoryColor(course.category), display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.3s' }}>
                 {course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) ? (
                     <img src={course.thumbnail} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -30,7 +30,7 @@ const CourseCard = ({ course }) => {
                 </div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', lineHeight: 1.4 }}>{course.title}</h3>
                 
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ marginTop: 'auto', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#64748b' }}>
                              {course.instructor?.[0]}

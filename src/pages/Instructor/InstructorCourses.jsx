@@ -222,58 +222,74 @@ const InstructorCourses = () => {
         <div style={{ display: 'flex', background: 'transparent', minHeight: '100vh', fontFamily: "'Inter', sans-serif" }}>
             <InstructorSidebar />
             <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+                <motion.header 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}
+                >
                     <div>
-                        <h1 style={{ fontSize: '2.25rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>My Courses</h1>
+                        <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>My Courses</h1>
                         <p style={{ color: '#64748b', marginTop: '0.25rem', fontSize: '1.1rem' }}>Manage your portfolio and create new learning experiences.</p>
                     </div>
-                    <button 
+                    <motion.button 
+                        whileHover={{ scale: 1.02, translateY: -2 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setIsModalOpen(true)} 
                         style={{ 
-                            background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', 
+                            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', 
                             color: 'white', 
                             display: 'flex', 
                             alignItems: 'center', 
-                            gap: '0.5rem', 
+                            gap: '0.75rem', 
                             padding: '1rem 2rem', 
                             borderRadius: '16px', 
-                            boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.4)', 
+                            boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.3)', 
                             border: 'none', 
                             fontWeight: 700, 
                             cursor: 'pointer',
-                            fontSize: '0.95rem'
+                            fontSize: '0.95rem',
+                            transition: 'all 0.3s'
                         }}
                     >
-                        <Plus size={22} /> Create New Course
-                    </button>
-                </header>
+                        <PlusCircle size={22} /> Create New Course
+                    </motion.button>
+                </motion.header>
 
-                <div className="card" style={{ background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="card" 
+                    style={{ background: 'white', borderRadius: '24px', border: '1px solid #f1f5f9', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02)', overflow: 'hidden' }}
+                >
                     
                     {/* Toolbar */}
-                    <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '1.5rem', alignItems: 'center', background: '#ffffff' }}>
+                    <div style={{ padding: '2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '1.5rem', alignItems: 'center', background: '#ffffff' }}>
                         <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
                             <Search size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input 
                                 placeholder="Search courses by name or category..." 
                                 style={{ 
                                     width: '100%', 
-                                    padding: '0.85rem 1rem 0.85rem 3rem', 
-                                    borderRadius: '14px', 
+                                    padding: '0.85rem 1rem 0.85rem 3.25rem', 
+                                    borderRadius: '16px', 
                                     border: '1px solid #e2e8f0', 
                                     outline: 'none', 
                                     background: '#f8fafc',
                                     fontSize: '0.95rem',
-                                    color: '#475569'
+                                    color: '#1e293b',
+                                    transition: 'all 0.2s',
                                 }} 
+                                onFocus={(e) => { e.target.style.borderColor = '#6366f1'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.1)'; }}
+                                onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
                             />
                         </div>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <button style={{ padding: '0.75rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <button style={{ padding: '0.75rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' }}>
                                 <FileText size={18} /> Category
                             </button>
-                            <button style={{ padding: '0.75rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                Sort By
+                            <button style={{ padding: '0.75rem 1.25rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s' }}>
+                                <MoreVertical size={18} /> Sort By
                             </button>
                         </div>
                     </div>
@@ -301,24 +317,35 @@ const InstructorCourses = () => {
                                 >
                                     <td style={{ padding: '1.25rem 1.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ffedd5', color: '#fb923c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.9rem' }}>
+                                            <div style={{ width: '54px', height: '54px', borderRadius: '16px', background: '#f1f5f9', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                                                 {course.thumbnail && (course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/')) ? (
-                                                    <img src={course.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                                    <img src={course.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 ) : (
                                                     course.title.charAt(0)
                                                 )}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.95rem' }}>{course.title}</div>
-                                                <div style={{ fontSize: '0.8rem', color: '#94a3b8', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{course.description}</div>
+                                                <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem', marginBottom: '0.2rem' }}>{course.title}</div>
+                                                <div style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{course.description}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td style={{ padding: '1.25rem 1.5rem', fontWeight: 500, color: '#475569' }}>
-                                        {course.category}
+                                    <td style={{ padding: '1.25rem 1.5rem' }}>
+                                        <span style={{ 
+                                            padding: '0.4rem 0.85rem', 
+                                            borderRadius: '50px', 
+                                            fontSize: '0.75rem', 
+                                            fontWeight: 700, 
+                                            background: '#e0e7ff', 
+                                            color: '#4f46e5',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px'
+                                        }}>
+                                            {course.category}
+                                        </span>
                                     </td>
-                                    <td style={{ padding: '1.25rem 1.5rem', fontWeight: 600, color: '#334155' }}>
-                                        ₹{course.price}
+                                    <td style={{ padding: '1.25rem 1.5rem' }}>
+                                        <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1.1rem' }}>₹{course.price}</div>
                                     </td>
                                     <td style={{ padding: '1.25rem 1.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.85rem' }}>
@@ -333,21 +360,25 @@ const InstructorCourses = () => {
                                         </div>
                                     </td>
                                     <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                            <button 
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                            <motion.button 
+                                                whileHover={{ scale: 1.1, background: '#eff6ff' }}
+                                                whileTap={{ scale: 0.9 }}
                                                 onClick={(e) => { e.stopPropagation(); handleEdit(course); }} 
-                                                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' }} 
+                                                style={{ padding: '0.65rem', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', color: '#4f46e5', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} 
                                                 title="Edit"
                                             >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button 
+                                                <Edit size={18} />
+                                            </motion.button>
+                                            <motion.button 
+                                                whileHover={{ scale: 1.1, background: '#fef2f2' }}
+                                                whileTap={{ scale: 0.9 }}
                                                 onClick={(e) => { e.stopPropagation(); handleDelete(course._id); }} 
-                                                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #fee2e2', background: 'white', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s' }} 
+                                                style={{ padding: '0.65rem', borderRadius: '12px', border: '1px solid #fee2e2', background: 'white', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} 
                                                 title="Delete"
                                             >
-                                                <Trash2 size={16} />
-                                            </button>
+                                                <Trash2 size={18} />
+                                            </motion.button>
                                         </div>
                                     </td>
                                 </motion.tr>
@@ -374,7 +405,7 @@ const InstructorCourses = () => {
                             )}
                         </tbody>
                     </table>
-                </div>
+                </motion.div>
             </main>
 
             {/* Modals Logic - Only Create/Edit remain */}
@@ -386,28 +417,28 @@ const InstructorCourses = () => {
                             <button onClick={() => { setIsModalOpen(false); setIsEditModalOpen(false); }} style={{ padding: '0.5rem', borderRadius: '50%', background: '#e2e8f0', border: 'none', cursor: 'pointer' }}><XIcon size={20} /></button>
                         </div>
                          <form onSubmit={isEditModalOpen ? handleUpdate : handleCreate} noValidate style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div>
-                                <label style={labelStyle}>Course Title</label>
-                                <input placeholder="e.g. Master ReactJS" value={formData.title} onChange={e => { setFormData({...formData, title: e.target.value}); if (errors.title) setErrors({...errors, title: null}); }} style={{ ...inputStyle, borderColor: errors.title ? '#ef4444' : '#e2e8f0', background: errors.title ? '#fef2f2' : 'white' }} disabled={isUploading} />
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                                <label className="form-label">Course Title</label>
+                                <input placeholder="e.g. Master ReactJS" value={formData.title} onChange={e => { setFormData({...formData, title: e.target.value}); if (errors.title) setErrors({...errors, title: null}); }} className="form-input" style={{ borderColor: errors.title ? '#ef4444' : undefined, background: errors.title ? '#fef2f2' : undefined }} disabled={isUploading} />
                                 {errors.title && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.title}</div>}
-                            </div>
+                            </motion.div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Price (₹)</label>
-                                    <input type="number" value={formData.price} onChange={e => { setFormData({...formData, price: e.target.value}); if (errors.price) setErrors({...errors, price: null}); }} style={{ ...inputStyle, borderColor: errors.price ? '#ef4444' : '#e2e8f0', background: errors.price ? '#fef2f2' : 'white' }} disabled={isUploading} />
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                                    <label className="form-label">Price (₹)</label>
+                                    <input type="number" value={formData.price} onChange={e => { setFormData({...formData, price: e.target.value}); if (errors.price) setErrors({...errors, price: null}); }} className="form-input" style={{ borderColor: errors.price ? '#ef4444' : undefined, background: errors.price ? '#fef2f2' : undefined }} disabled={isUploading} />
                                     {errors.price && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.price}</div>}
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Category</label>
-                                    <select value={formData.category} onChange={e => { setFormData({...formData, category: e.target.value}); if (errors.category) setErrors({...errors, category: null}); }} style={{ ...inputStyle, background: errors.category ? '#fef2f2' : 'white', borderColor: errors.category ? '#ef4444' : '#e2e8f0' }} disabled={isUploading}>
+                                </motion.div>
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                                    <label className="form-label">Category</label>
+                                    <select value={formData.category} onChange={e => { setFormData({...formData, category: e.target.value}); if (errors.category) setErrors({...errors, category: null}); }} className="form-input" style={{ appearance: 'none', background: errors.category ? '#fef2f2' : undefined, borderColor: errors.category ? '#ef4444' : undefined }} disabled={isUploading}>
                                         <option value="" disabled>Select</option>
                                         {COURSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                     {errors.category && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.category}</div>}
-                                </div>
+                                </motion.div>
                             </div>
-                            <div>
-                                <label style={labelStyle}>Course Thumbnail</label>
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                                <label className="form-label">Course Thumbnail</label>
                                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                                     <button 
                                         type="button"
@@ -448,13 +479,13 @@ const InstructorCourses = () => {
                                 </div>
 
                                 {thumbnailMode === 'file' ? (
-                                    <input type="file" onChange={e => setThumbnailFile(e.target.files[0])} accept="image/*" style={{ ...inputStyle, padding: '0.5rem', background: 'white' }} disabled={isUploading} />
+                                    <input type="file" onChange={e => setThumbnailFile(e.target.files[0])} accept="image/*" className="form-input" style={{ padding: '0.65rem' }} disabled={isUploading} />
                                 ) : (
                                     <input 
                                         placeholder="Paste image address (e.g. https://...)" 
                                         value={thumbnailUrl} 
                                         onChange={e => setThumbnailUrl(e.target.value)} 
-                                        style={inputStyle} 
+                                        className="form-input" 
                                         disabled={isUploading} 
                                     />
                                 )}
@@ -469,13 +500,13 @@ const InstructorCourses = () => {
                                         />
                                     </div>
                                 )}
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Description</label>
-                                <textarea value={formData.description} onChange={e => { setFormData({...formData, description: e.target.value}); if (errors.description) setErrors({...errors, description: null}); }} style={{ ...inputStyle, minHeight: '100px', borderColor: errors.description ? '#ef4444' : '#e2e8f0', background: errors.description ? '#fef2f2' : 'white' }} disabled={isUploading} />
+                            </motion.div>
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                                <label className="form-label">Description</label>
+                                <textarea value={formData.description} onChange={e => { setFormData({...formData, description: e.target.value}); if (errors.description) setErrors({...errors, description: null}); }} className="form-input form-textarea" style={{ borderColor: errors.description ? '#ef4444' : undefined, background: errors.description ? '#fef2f2' : undefined }} disabled={isUploading} />
                                 {errors.description && <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444', fontSize: '0.8rem', marginTop: '4px' }}><AlertCircle size={14} /> {errors.description}</div>}
-                            </div>
-                            <button type="submit" disabled={isUploading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem', background: '#4f46e5', color: 'white', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', opacity: isUploading ? 0.7 : 1 }}>
+                            </motion.div>
+                            <button type="submit" disabled={isUploading} className="btn-submit" style={{ marginTop: '0.5rem' }}>
                                 {isUploading ? <><Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> {isEditModalOpen ? 'Updating...' : 'Creating...'}</> : (isEditModalOpen ? 'Save Changes' : 'Create Course')}
                             </button>
                         </form>
