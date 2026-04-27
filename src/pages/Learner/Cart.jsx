@@ -61,7 +61,7 @@ const Cart = () => {
 
     const subtotal = calculateSubtotal();
     const gst = subtotal * 0.18;
-    const platformFee = 0;
+    const platformFee = 10;
     const totalPayable = subtotal + gst + platformFee;
 
     const containerVariants = {

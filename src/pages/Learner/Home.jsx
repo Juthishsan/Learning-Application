@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import CourseCard from '../../components/Common/CourseCard';
 
-const Hero = () => {
+const Hero = ({ allCourses = [] }) => {
     return (
         <section style={{ 
             padding: '0', 
@@ -147,15 +147,27 @@ const Hero = () => {
 
                     <div style={{ marginTop: '5rem', display: 'flex', gap: '3.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
                         <div>
-                            <h4 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>1k+</h4>
+                            <h4 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>
+                                {allCourses.length > 0 
+                                    ? allCourses.reduce((acc, c) => acc + (c.students || 0), 0) 
+                                    : '0'}
+                            </h4>
                             <p style={{ color: '#94a3b8', fontSize: '1rem', fontWeight: 500 }}>Students</p>
                         </div>
                         <div>
-                            <h4 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>50+</h4>
+                            <h4 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>
+                                {allCourses.length > 0 
+                                    ? new Set(allCourses.map(c => c.instructor)).size 
+                                    : '0'}
+                            </h4>
                             <p style={{ color: '#94a3b8', fontSize: '1rem', fontWeight: 500 }}>Expert Instructors</p>
                         </div>
                         <div>
-                            <h4 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>4.9</h4>
+                            <h4 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>
+                                {allCourses.length > 0 
+                                    ? (allCourses.reduce((acc, c) => acc + (c.rating || 0), 0) / allCourses.length || 4.8).toFixed(1) 
+                                    : '4.8'}
+                            </h4>
                             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                                 {[1,2,3,4,5].map(i => <div key={i} style={{ width: '8px', height: '8px', background: '#f59e0b', borderRadius: '50%' }}></div>)}
                                 <span style={{ color: '#94a3b8', fontSize: '1rem', fontWeight: 500, marginLeft: '8px' }}>Rating</span>
@@ -387,7 +399,7 @@ const Home = () => {
 
     return (
         <div style={{ fontFamily: "'Inter', sans-serif" }}>
-            <Hero />
+            <Hero allCourses={allCourses} />
             
             {/* AI Personalized Recommendations */}
             {userSnapshot && (

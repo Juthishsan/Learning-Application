@@ -242,7 +242,7 @@ const CourseOverview = () => {
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.1)', padding: '0.4rem 1rem', borderRadius: '50px', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 500 }}>
                             <span style={{ color: '#38bdf8' }}>{course.category}</span>
                             <span style={{ width: '4px', height: '4px', background: 'white', borderRadius: '50%', opacity: 0.5 }}></span>
-                            <span>Last updated Jan 2026</span>
+                            <span>Last updated {course.createdAt ? new Date(course.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Jan 2026'}</span>
                         </div>
                         
                         <h1 style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '1.5rem', lineHeight: 1.1, background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -256,10 +256,10 @@ const CourseOverview = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div style={{ display: 'flex' }}>
-                                    {[1,2,3,4,5].map(star => <Star key={star} size={20} fill={star <= Math.round(course.rating || 4.5) ? "#fbbf24" : "none"} stroke={star <= Math.round(course.rating || 4.5) ? "#fbbf24" : "#cbd5e1"} />)}
+                                    {[1,2,3,4,5].map(star => <Star key={star} size={20} fill={star <= Math.round(course.rating || 0) ? "#fbbf24" : "none"} stroke={star <= Math.round(course.rating || 0) ? "#fbbf24" : "#cbd5e1"} />)}
                                 </div>
-                                <span style={{ fontWeight: 700, color: '#fbbf24' }}>{course.rating || 4.5}</span>
-                                <span style={{ color: '#94a3b8' }}>({course.numReviews || 1240} ratings)</span>
+                                <span style={{ fontWeight: 700, color: '#fbbf24' }}>{course.rating > 0 ? course.rating.toFixed(1) : "New"}</span>
+                                <span style={{ color: '#94a3b8' }}>({course.numReviews || 0} {course.numReviews === 1 ? 'rating' : 'ratings'})</span>
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#e2e8f0' }}>

@@ -176,13 +176,13 @@ const AdminDashboard = () => {
                                     </defs>
                                     <CartesianGrid vertical={false} stroke="#f1f5f9" strokeDasharray="3 3" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: '12px', fontWeight: 600}} dy={15} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: '12px', fontWeight: 600}} tickFormatter={(value) => activeChart === 'revenue' ? `$${value}` : value} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: '12px', fontWeight: 600}} tickFormatter={(value) => activeChart === 'revenue' ? `₹${value}` : value} />
                                     <Tooltip 
                                         wrapperStyle={{ zIndex: 100 }}
                                         contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '16px', color: 'white', padding: '15px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)' }}
                                         itemStyle={{ color: activeChart === 'students' ? '#818cf8' : '#34d399', fontWeight: 800 }}
                                         labelStyle={{ color: '#94a3b8', fontWeight: 700, marginBottom: '8px' }}
-                                        formatter={(value) => [activeChart === 'revenue' ? `$${value}` : value, activeChart === 'revenue' ? 'Revenue' : 'Students']}
+                                        formatter={(value) => [activeChart === 'revenue' ? `₹${value}` : value, activeChart === 'revenue' ? 'Revenue' : 'Students']}
                                     />
                                     <Area type="monotone" dataKey="count" stroke={activeChart === 'students' ? "#6366f1" : "#10b981"} strokeWidth={4} fillOpacity={1} fill={`url(#${activeChart === 'students' ? 'colorStudents' : 'colorRevenue'})`} />
                                 </AreaChart>

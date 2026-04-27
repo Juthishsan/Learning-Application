@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import '../../styles/Checkout.css';
 
 const GST_RATE = 0.18;
-const PLATFORM_FEE = 0.00;
+const PLATFORM_FEE = 10.00;
 const COUPONS = {
   DIVINE10:  { type: 'percent', value: 10,  label: '10% off' },
   SKILLUP20: { type: 'percent', value: 20,  label: '20% off for new learners' },

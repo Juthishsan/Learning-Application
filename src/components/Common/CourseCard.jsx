@@ -25,7 +25,7 @@ const CourseCard = ({ course }) => {
                         {course.category}
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.9rem', fontWeight: 600 }}>
-                        <Star size={14} fill="#f59e0b" color="#f59e0b" /> {course.rating || 4.5}
+                        <Star size={14} fill="#f59e0b" color="#f59e0b" /> {course.rating > 0 ? course.rating.toFixed(1) : "New"}
                     </span>
                 </div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', lineHeight: 1.4 }}>{course.title}</h3>
